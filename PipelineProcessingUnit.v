@@ -964,8 +964,7 @@ module Four_SE (output reg [31:0] out, input [23:0] in);
 endmodule
 
 //                 PIPELINE REGISTERS
-module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0, output reg [11:0] I11_0, output reg [3:0] I3_0, I19_16, I15_12, I31_28, output reg [2:0] I27_25, output reg ID_S,
-  input [31:0] I, IF_NextPC, input IF_ID_LE, IF_flush, Clk);
+module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0, output reg [11:0] I11_0, output reg [3:0] I3_0, I19_16, I15_12, I31_28, output reg [2:0] I27_25, output reg ID_S, input [31:0] I, IF_NextPC, input IF_ID_LE, IF_flush, Clk);
     /*
     * Active when Clk goes up. Data is saved if IFID_write == 1.
     */
@@ -1012,12 +1011,12 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] 
         MEM_Cond_Codes <= EX_Cond_Codes;
         MEM_I15_12 <= EX_I15_12;
         MEM_load_instr <=EX_load_instr;
+        MEM_Data_Mem_Opcode <= EX_Data_Mem_Opcode;
         MEM_RF_enable <= EX_RF_enable;
         end
 endmodule
 
-module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_I15_12, output reg WB_load_instr, WB_RF_enable,
-  input [31:0] MEM_ALU_Res, Mem_Data, input [3:0] MEM_I15_12, input MEM_load_instr, MEM_RF_enable, Clk); 
+module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_I15_12, output reg WB_load_instr, WB_RF_enable, input [31:0] MEM_ALU_Res, Mem_Data, input [3:0] MEM_I15_12, input MEM_load_instr, MEM_RF_enable, Clk); 
     always @ (posedge Clk)
         begin
             WB_ALU_Res <= MEM_ALU_Res;
@@ -1061,7 +1060,7 @@ module Processing_pipeline_unit();
     wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTn, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
-    wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, MEM_Rn, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes;
+    wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op,I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes;
     wire [2:0] I27_25, EX_I27_25;
     wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB;
     wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, 
@@ -1134,33 +1133,30 @@ module Processing_pipeline_unit();
   $fclose(fi);
 end  
 
-initial #300 $finish;
+initial #140 $finish;
   initial begin
     Clk = 0;
     forever #5 Clk = !Clk;
   end
   initial begin
-    #5   Register_File.ProgramCounter = 32'd0;
+    #1   Register_File.ProgramCounter = 32'd0;
   end
 
         initial begin
-        /*// imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
+        /*// imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).*/
           $display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
-          $display("    PC    |             I                  |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|     Clk, Time ");
-          $monitor("%d|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b     |      %b      |     %b | %0d ",
+          $display("    PC    |             I                  |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|     Clk| Time ");
+          $monitor("%d|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b     |      %b      |     %b  | %0d ",
             currentPC, DataOut, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
             WB_load_instr, WB_RF_enable, 
-            Clk, $time);*/
-            
-          $display("    PC    |             I                  |L|F|ID_RF_enable|ForwardA|ForwardB|I15_12|ID_I15_12|EX_RF_enable|EX_Rd|MEM_RF_enable|MEM_Rd|MEM_Rn|WB_RF_enable|WB_Rd|     Clk, Time ");
-          $monitor("%d|%b|%b|%b|      %b     |   %b   |   %b   | %b |  %b   |      %b     |%b |      %b      | %b | %b |      %b     | %b|     %b  | %0d",
-            currentPC, DataOut, IF_ID_LE,cond_output, ID_RF_enable, ForwardA, ForwardB, I15_12, ID_I15_12,
-            EX_RF_enable, EX_Rd,
-            MEM_RF_enable, MEM_Rd, MEM_Rn,
-            WB_RF_enable, WB_Rd,
             Clk, $time);
+            
+         /** $display("    PC    |             I                  |L|F|ID_RF_enable|ForwardA|ForwardB|I15_12|EX_RF_enable|EX_Rd|MEM_RF_enable|MEM_Rd|WB_RF_enable|WB_Rd|     Clk| Time ");
+          $monitor("%d|%b|%b|%b|      %b     |   %b   |   %b   | %b |      %b     |%b |      %b      | %b |      %b     | %b|     %b  | %0d",
+            currentPC, DataOut, IF_ID_LE,cond_output, ID_RF_enable, ForwardA, ForwardB, I15_12, EX_RF_enable, EX_Rd, MEM_RF_enable, MEM_Rd,WB_RF_enable, WB_Rd,
+            Clk, $time);**/
           end 
   
 endmodule
