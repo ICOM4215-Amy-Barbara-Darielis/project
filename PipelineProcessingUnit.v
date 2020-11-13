@@ -1085,7 +1085,7 @@ module Processing_pipeline_unit();
         mux_2x1_32b IF_mux(PCIN, cond_output, nextPC, TA);
         
     //IF/ID transition
-        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC, 1, cond_output, Clk); //IF_ID_LE
+        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC, 1'b1, cond_output, Clk); //IF_ID_LE
 
     //Instuction Decodification Stage
         register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, WB_Rd, Clk, WB_load_instr, PCLE); //falta de donde viene C, a donde va POrtC, 
