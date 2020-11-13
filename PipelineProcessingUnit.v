@@ -170,6 +170,7 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, output reg IF_ID_
         //Initially no data hazard has been detected yet, standard register contents are passed in ID stage
         ForwardA <= 2'b11; 
         ForwardB <= 2'b00;
+        
         //Will choose nearest stage to ID when Data hazard occurs
         //WB Forwarding
       if(WB_RF_enable)
@@ -964,7 +965,8 @@ module Four_SE (output reg [31:0] out, input [23:0] in);
 endmodule
 
 //                 PIPELINE REGISTERS
-module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0, output reg [11:0] I11_0, output reg [3:0] I3_0, I19_16, I15_12, I31_28, output reg [2:0] I27_25, output reg ID_S, input [31:0] I, IF_NextPC, input IF_ID_LE, IF_flush, Clk);
+module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0, output reg [11:0] I11_0, output reg [3:0] I3_0, I19_16, I15_12, I31_28, output reg [2:0] I27_25, output reg ID_S,
+  input [31:0] I, IF_NextPC, input IF_ID_LE, IF_flush, Clk);
     /*
     * Active when Clk goes up. Data is saved if IFID_write == 1.
     */
@@ -984,8 +986,8 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
             end
 endmodule
 
-module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I11_0, output reg [3:0] EX_I15_12, EX_ALU_op, output reg [2:0] EX_I27_25, output reg [1:0] EX_Data_Mem_Opcode, output reg EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable,
-                     input [31:0] ID_Portm, ID_Portn, input [11:0] ID_I11_0, input [3:0] ID_I15_12, ID_ALU_op, input [2:0] I27_25, input [1:0] ID_Data_Mem_Opcode, input ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk); 
+module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I11_0, output reg [3:0] EX_I15_12, EX_ALU_op, output reg [2:0] EX_I27_25, output reg [1:0] EX_Data_Mem_Opcode, output reg EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, 
+  input [31:0] ID_Portn, ID_Portm, input [11:0] ID_I11_0, input [3:0] ID_I15_12, ID_ALU_op, input [2:0] I27_25, input [1:0] ID_Data_Mem_Opcode, input ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk); 
     always @ (posedge Clk)
         begin
             EX_PORTm <= ID_Portm;
@@ -1011,12 +1013,12 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] 
         MEM_Cond_Codes <= EX_Cond_Codes;
         MEM_I15_12 <= EX_I15_12;
         MEM_load_instr <=EX_load_instr;
-        MEM_Data_Mem_Opcode <= EX_Data_Mem_Opcode;
         MEM_RF_enable <= EX_RF_enable;
         end
 endmodule
 
-module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_I15_12, output reg WB_load_instr, WB_RF_enable, input [31:0] MEM_ALU_Res, Mem_Data, input [3:0] MEM_I15_12, input MEM_load_instr, MEM_RF_enable, Clk); 
+module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_I15_12, output reg WB_load_instr, WB_RF_enable,
+  input [31:0] MEM_ALU_Res, Mem_Data, input [3:0] MEM_I15_12, input MEM_load_instr, MEM_RF_enable, Clk); 
     always @ (posedge Clk)
         begin
             WB_ALU_Res <= MEM_ALU_Res;
@@ -1060,7 +1062,7 @@ module Processing_pipeline_unit();
     wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTn, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
-    wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op,I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes;
+    wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, MEM_Rn, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes;
     wire [2:0] I27_25, EX_I27_25;
     wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB;
     wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, 
@@ -1073,7 +1075,8 @@ module Processing_pipeline_unit();
   ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, DataOut);
   
     mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, 1'b0, 4'b0, 1'b0, 1'b0);   
-    Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr); 
+    Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, 
+                                            EX_load_instr); 
     conditionhandler Condition_Handler(cond_output, oN,oZ,oC,oV, ID_B_instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
 
@@ -1084,7 +1087,7 @@ module Processing_pipeline_unit();
         mux_2x1_32b IF_mux(PCIN, cond_output, nextPC, TA);
         
     //IF/ID transition
-        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC, 1'b1, cond_output, Clk); //IF_ID_LE
+        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC, IF_ID_LE, cond_output, Clk); 
 
     //Instuction Decodification Stage
         register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, WB_Rd, Clk, WB_load_instr, PCLE); //falta de donde viene C, a donde va POrtC, 
@@ -1095,7 +1098,8 @@ module Processing_pipeline_unit();
     
     //ID/EX transition
         //I15_12 =  Rd
-        IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_I11_0, EX_Rd, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, ID_PORTm, ID_PORTn, I11_0, I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk);
+        IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_I11_0, EX_Rd, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, 
+                                    ID_PORTm, ID_PORTn, I11_0, ID_I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk);
 
     //Execution stage
         mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, SSEresult, EX_PORTn); 
@@ -1127,36 +1131,31 @@ module Processing_pipeline_unit();
     Instruction_Mem.Mem[Address+1] = data[23:16];
     Instruction_Mem.Mem[Address+2] = data[15:8];
     Instruction_Mem.Mem[Address+3] = data[7:0]; 
-    /*$display("IR: Address = %d, DataOut = %b%b%b%b", Address, Instruction_Mem.Mem[Address], Instruction_Mem.Mem[Address+1], Instruction_Mem.Mem[Address+2], Instruction_Mem.Mem[Address+3]);  */
+    $display("IR: Address = %d, DataOut = %b%b%b%b", Address, Instruction_Mem.Mem[Address], Instruction_Mem.Mem[Address+1], Instruction_Mem.Mem[Address+2], Instruction_Mem.Mem[Address+3]);  
     Address = Address + 4;
   end
   $fclose(fi);
 end  
 
-initial #140 $finish;
+initial #300 $finish;
   initial begin
     Clk = 0;
     forever #5 Clk = !Clk;
   end
   initial begin
-    #1   Register_File.ProgramCounter = 32'd0;
+    #5   Register_File.ProgramCounter = 32'd0;
   end
 
         initial begin
-        /*// imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).*/
+        // imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
           $display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
-          $display("    PC    |             I                  |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|     Clk| Time ");
-          $monitor("%d|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |     %b       |     %b      |    %b   | %0d ",
-            currentPC, DataOut, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
+          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|     Clk, Time ");
+          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b     |      %b      |     %b | %0d ",
+            currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
-            WB_load_instr, WB_RF_enable, 
+            WB_load_instr, WB_RF_enable,
             Clk, $time);
-            
-         /** $display("    PC    |             I                  |L|F|ID_RF_enable|ForwardA|ForwardB|I15_12|EX_RF_enable|EX_Rd|MEM_RF_enable|MEM_Rd|WB_RF_enable|WB_Rd|     Clk| Time ");
-          $monitor("%d|%b|%b|%b|      %b     |   %b   |   %b   | %b |      %b     |%b |      %b      | %b |      %b     | %b|     %b  | %0d",
-            currentPC, DataOut, IF_ID_LE,cond_output, ID_RF_enable, ForwardA, ForwardB, I15_12, EX_RF_enable, EX_Rd, MEM_RF_enable, MEM_Rd,WB_RF_enable, WB_Rd,
-            Clk, $time);**/
           end 
   
 endmodule
