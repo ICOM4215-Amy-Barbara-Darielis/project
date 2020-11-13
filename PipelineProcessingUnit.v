@@ -1010,6 +1010,7 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] 
         begin
         MEM_PORTn <= EX_PORTn;
         MEM_ALU_Res <= EX_ALU_Res;
+	MEM_Data_Mem_Opcode <= EX_Data_Mem_Opcode;
         MEM_Cond_Codes <= EX_Cond_Codes;
         MEM_I15_12 <= EX_I15_12;
         MEM_load_instr <=EX_load_instr;
