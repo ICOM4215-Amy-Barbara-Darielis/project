@@ -137,7 +137,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
            alu_Op = 3'b000;
            B_Instr = 0;
            Shift_imm = 0;
-           Load_instr = 0;
+           Load_instr = 1;
            RF_enable = 0;
            ID_S=0;
          end
