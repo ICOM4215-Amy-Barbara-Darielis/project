@@ -1,43 +1,48 @@
-// Amy Ayala
-// Barbara Gonzalez-Rivera
-// Darielis Morales Rodríguez
+
+// Course: ICOM4215
+// Project Name: Processing Pipeline Unit
+// Contributors:
+//				Amy Ayala
+// 				Barbara Gonzalez-Rivera
+// 				Darielis Morales Rodríguez
 
 /**********************************************************
  *                    Control Unit                        *
  **********************************************************/
-module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, output reg B_Instr,  Shift_imm,  Load_instr,  RF_enable, input [31:0] I, input reset);
-  always @(I, posedge reset) 
+module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, output reg B_Instr,  Shift_imm,  Load_instr,  RF_enable, ID_S, input [31:0] I, input reset);
+  // Control unit decodes instructions and provides appropiate control signals.
+  reg invalid; //This bit will be set when invalid instructions are received
+  always @(I, posedge reset)
     begin
+    	invalid = 0;
     if(reset)
       begin
-       // $display("CU:IF");
         Data_Mem_Opcode = 2'b0;
         alu_Op = 3'b0;
         B_Instr = 1'b0;
         Shift_imm = 1'b0;
         Load_instr= 1'b0;
         RF_enable= 1'b0;
+        ID_S = 1'b0;
       end
     else
      begin 
-       // $display("CU:ELSE");
         alu_Op = I[24:21];
         Data_Mem_Opcode = 2'b00;
         Load_instr = 0;
         Shift_imm = 0;
         B_Instr = 0;
         RF_enable = 0;
-        
+       ID_S = I[20];
         case (I[27:25])
         3'b000: 
           begin 
             //Check for invalid instructions
             if( I[4] == 1 || (I[20] == 0 && I[24:23] == 2'b10) || (I[11:7] == 5'b00000 && (I[6:5] == 2'b00 || I[6:5] == 2'b11)) ) //Last OR(AND(OR) operation to filter invalid shifter operands(data processing instructions)
-            begin
-                // INVALID!!!!!!!
-            end
+              	begin
+                	invalid = 1;
+                end
             Data_Mem_Opcode = 2'b10;
-            //$display("Changed Shift_imm");
             Shift_imm = 1;
             RF_enable = 1;
           end
@@ -45,15 +50,16 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
           begin
             //Check for invalid instructions
             if( I[24:23] == 2'b10 && (I[21:20] == 2'b00 || I[21:20] == 2'b10) )
-            begin
-                // INVALID!!!!!!!
-            end
+            	begin
+                	invalid = 1;
+            	end
             Data_Mem_Opcode = 2'b10;
             RF_enable = 1;
           end
         3'b010:            //no invalid instructions
           begin
             Load_instr= I[20];
+            ID_S = 0;
             if(Load_instr == 0) 
                 begin
                 if(I[22] == 0) //b==0
@@ -71,13 +77,14 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                      Data_Mem_Opcode = 2'b00;
                 end
           end
-        3'b011: 
+        3'b011:
           begin
+             ID_S = 0;
             //Check for invalid instructions
             if(I[4]==1)
-            begin
-                // INVALID!!!!!!!!
-            end
+            	begin
+                	invalid=1;
+            	end
             
             Load_instr= I[20];
             if(Load_instr == 0) 
@@ -99,6 +106,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
           end
         3'b101:             //no invalid instructions
           begin
+            ID_S = 0;
             if(I[24] == 0) 
               begin
                   Data_Mem_Opcode = 2'b10;
@@ -112,29 +120,38 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
               end
           end
         default:
-            //Check for invalid instructions
+            //Check for invalid instructions that do not match any other format
             begin
-            //INVALID!!!!!!!!!
+            	invalid = 1;
             end
         endcase
         //Check for invalid instructions
         if(I[31:28] == 4'b1111)
-        begin
-        //INVALID!!!!!!!!!
-        end
+        	begin
+          		invalid = 1;
+        	end
+       if(invalid)
+         begin
+           $display("Invalid instructions");
+           Data_Mem_Opcode = 2'b00;
+           alu_Op = 3'b000;
+           B_Instr = 0;
+           Shift_imm = 0;
+           Load_instr = 0;
+           RF_enable = 0;
+           ID_S=0;
+         end
      end
      end 
 endmodule
-
-
-
 
 /**********************************************************
  *                  mux_8x4_32b                          *
  **********************************************************/
 module mux_8x4_32b(output reg Y_0,output reg [4:1] Y_1_4, output reg Y_5, Y_6, input S, A_0, input[4:1] A_1_4,input A_5, A_6, B_0,input[4:1] B_1_4,input B_5, B_6);
-    always @ (*)
-      
+    // This multiplexer chooses between two sets of 4 inputs.
+  // In our application it send zeroes for the control lines, instead of the the control unit output when there is control hazards.
+  always @ (*)    
       case (S)
         1'b0: 
           begin 
@@ -143,7 +160,6 @@ module mux_8x4_32b(output reg Y_0,output reg [4:1] Y_1_4, output reg Y_5, Y_6, i
           Y_1_4 = A_1_4;
           Y_5 = A_5;
           Y_6 = A_6;
-           // $display("1 Y_1_4: %b" , Y_1_4);
           end
         1'b1: 
           begin 
@@ -152,7 +168,6 @@ module mux_8x4_32b(output reg Y_0,output reg [4:1] Y_1_4, output reg Y_5, Y_6, i
           Y_1_4 = B_1_4;
           Y_5 = B_5;
           Y_6 = B_6;
-           // $display(" 2 Y_1_4: %b" , Y_1_4);
           end 
       endcase
 endmodule
@@ -217,8 +232,10 @@ endmodule
  *                 Condition Handler                      *
  **********************************************************/
 module conditionhandler(output reg cond_output,input condN,condZ,condC,condV, ID_B_instr, input [3:0] CC);
-    reg cond_true;
-    always @ (condN,condZ,condC,condV, CC)
+  // Checks condition is met and returns cond_output= 1 if branch instruction indicator is asserted (1)
+  // and conditional output according to necessary conditional code is met.
+  reg cond_true;
+  always @ (condN,condZ,condC,condV, CC)
         begin
             cond_true = 0;
             case(CC)
@@ -613,7 +630,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 		//This instruction in the manual is said to be 001 
 		3'b001:
 			begin 
-			//$display("Immediate");
 			/**From the ARM manual
 			*shifter_operand = immed_8 Rotate_right (rotate_imm * 2)
 			*if rorate_imm == 0 then
@@ -642,11 +658,8 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                begin
 	                    //LSL - Logical Shift Left 
 	                    //A5.1.5 ARM Manual
-	                    // $display("%b",num12[6:5]);
 	                    if(num12[6:5]==2'b00)
 	                        begin
-	                          //$display("LSL");
-	                        //$display("here");
 	                        //if shift_imm ==0 
 	                            //shifter_operand = Rm
 	                            //Shifter_carry_out = C Flag
@@ -666,7 +679,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                end ///End of LSL
 	                     if(num12[6:5]==2'b01)
     	                     begin
-    	                     //$display("LSR");
             	                     //LSR - Logical Shift Right
             	                    //A5.1.7
             	                   // if shift_imm == 0 then
@@ -689,7 +701,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                   //Arithmetic Shift Right
 	                    if(num12[6:5]==2'b10)
     	                     begin
-    	                    // $display("Arithmetic Shift Right");
             	              // if shift_imm == 0 then
             	              if(num12[11:7]==4'b0000)
             	                    begin
@@ -721,7 +732,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                        //rotate right
 	                    if(num12[6:5]==2'b11)
 	                        begin
-	                        //$display("ROR");
             	                //if shift_imm == 0 then
             	                if(num12[11:7]==4'b0000)
                 	                begin
@@ -744,12 +754,10 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	        end
 	        3'b010:
 	            begin   
-	           // $display("Immediate Offset");
 	                result = 32'd0 + num12[11:0];
 	            end
             3'b011:
                 begin   
-             //   $display("Register Offset");
                     result = rm;
                 end
 		endcase		
@@ -968,7 +976,7 @@ module Four_SE (output reg [31:0] out, input [23:0] in);
 endmodule
 
 //                 PIPELINE REGISTERS
-module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0, output reg [11:0] I11_0, output reg [3:0] I3_0, I19_16, I15_12, I31_28, output reg [2:0] I27_25, output reg ID_S,
+module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0, output reg [11:0] I11_0, output reg [3:0] I3_0, I19_16, I15_12, I31_28, output reg [2:0] I27_25,
                      input [31:0] I, IF_NextPC, input IF_ID_LE, IF_flush, Clk, reset);
     /*
     * Active when Clk goes up. Data is saved if IFID_write == 1.
@@ -977,7 +985,6 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
     begin
     if(reset)
       begin
-       // $display("IF: IF");
        			I31_0  <= 32'b0;
         		ID_NextPC <= 32'b0;
         		I23_0 <= 24'b0;
@@ -987,11 +994,9 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
         		I15_12 <= 4'b0;
         		I31_28 <= 4'b0;
         		I27_25 <= 3'b0; 
-      			ID_S <= 1'b0;
       end
     else
       begin
-       // $display("IF:ELSE");
         if (IF_ID_LE) 
             begin
                 ID_NextPC <= IF_NextPC;
@@ -1003,7 +1008,6 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
                 I19_16 <= I31_0[19:16];
                 I15_12 <= I31_0[15:12];
                 I31_28 <= I31_0[31:28];
-                ID_S <= I31_0[20];
             end
       end
     end
@@ -1015,7 +1019,6 @@ module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I
     begin 
      if(reset)
       begin
-       // $display("ID: IF");
        		EX_PORTm <=  32'b0;
             EX_PORTn <= 32'b0;
             EX_I11_0 <= 12'b0;
@@ -1029,7 +1032,6 @@ module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I
             EX_Data_Mem_Opcode <= 2'b0;
       end
     else
-       // $display("ID:ELSE");
          begin
             EX_PORTm <= ID_Portm;
             EX_PORTn <= ID_Portn;
@@ -1053,7 +1055,6 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] 
     begin
      if(reset)
        		 begin
-            //  $display("EX: IF");
              MEM_PORTn = 32'b0;
        		 MEM_ALU_Res = 32'b0;
        		 MEM_Cond_Codes = 4'b0;
@@ -1064,7 +1065,6 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] 
       		end
     else
       begin
-       // $display("EX:ELSE");
         MEM_PORTn <= EX_PORTn;
         MEM_ALU_Res <= EX_ALU_Res;
         MEM_Cond_Codes <= EX_Cond_Codes;
@@ -1082,7 +1082,6 @@ module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_
       begin
         if(reset)
        		begin
-            // $display("MEM: IF");
             WB_ALU_Res <= 32'b0;
             WB_Data <= 32'b0;
             WB_I15_12 <= 4'b0;
@@ -1091,7 +1090,6 @@ module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_
       		end
     else
       begin
-        //$display("MEM:ELSE");
             WB_ALU_Res <= MEM_ALU_Res;
             WB_Data <= Mem_Data;
             WB_I15_12 <= MEM_I15_12;
@@ -1145,7 +1143,7 @@ module Processing_pipeline_unit();
 
     //Embedded modules
     
-  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, I31_0,reset);
+  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, ID_S, I31_0,reset);
   
     mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, 1'b0, 4'b0, 1'b0, 1'b0);   
   Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, 
@@ -1160,7 +1158,7 @@ module Processing_pipeline_unit();
         mux_2x1_32b IF_mux(PCIN, cond_output, nextPC, TA);
         
     //IF/ID transition
-        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC,1'b1, cond_output, Clk,reset); 
+        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25,  DataOut, nextPC,1'b1, cond_output, Clk,reset); 
 
     //Instuction Decodification Stage
         register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, WB_Rd, Clk, WB_load_instr, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
