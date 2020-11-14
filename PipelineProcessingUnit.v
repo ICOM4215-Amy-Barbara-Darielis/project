@@ -2,21 +2,21 @@
 // Course: ICOM4215
 // Project Name: Processing Pipeline Unit
 // Contributors:
-//				Amy Ayala
-// 				Barbara Gonzalez-Rivera
-// 				Darielis Morales Rodríguez
+//		Amy Ayala
+// 		Barbara Gonzalez-Rivera
+// 		Darielis Morales Rodríguez
 
 /**********************************************************
  *                    Control Unit                        *
  **********************************************************/
 module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, output reg B_Instr,  Shift_imm,  Load_instr,  RF_enable, ID_S, input [31:0] I, input reset);
-  // Control unit decodes instructions and provides appropiate control signals.
   reg invalid; //This bit will be set when invalid instructions are received
   always @(I, posedge reset)
     begin
     	invalid = 0;
     if(reset)
       begin
+       // $display("CU:IF");
         Data_Mem_Opcode = 2'b0;
         alu_Op = 3'b0;
         B_Instr = 1'b0;
@@ -27,6 +27,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
       end
     else
      begin 
+       // $display("CU:ELSE");
         alu_Op = I[24:21];
         Data_Mem_Opcode = 2'b00;
         Load_instr = 0;
@@ -43,6 +44,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                 	invalid = 1;
                 end
             Data_Mem_Opcode = 2'b10;
+            //$display("Changed Shift_imm");
             Shift_imm = 1;
             RF_enable = 1;
           end
@@ -132,12 +134,12 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         	end
        if(invalid)
          begin
-           $display("Invalid instructions");
+           //Invalid instruction behavior
            Data_Mem_Opcode = 2'b00;
            alu_Op = 3'b000;
            B_Instr = 0;
            Shift_imm = 0;
-           Load_instr = 1;
+           Load_instr = 0;
            RF_enable = 0;
            ID_S=0;
          end
@@ -149,9 +151,8 @@ endmodule
  *                  mux_8x4_32b                          *
  **********************************************************/
 module mux_8x4_32b(output reg Y_0,output reg [4:1] Y_1_4, output reg Y_5, Y_6, input S, A_0, input[4:1] A_1_4,input A_5, A_6, B_0,input[4:1] B_1_4,input B_5, B_6);
-    // This multiplexer chooses between two sets of 4 inputs.
-  // In our application it send zeroes for the control lines, instead of the the control unit output when there is control hazards.
-  always @ (*)    
+    always @ (*)
+      
       case (S)
         1'b0: 
           begin 
@@ -630,6 +631,7 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 		//This instruction in the manual is said to be 001 
 		3'b001:
 			begin 
+			//$display("Immediate");
 			/**From the ARM manual
 			*shifter_operand = immed_8 Rotate_right (rotate_imm * 2)
 			*if rorate_imm == 0 then
@@ -658,8 +660,11 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                begin
 	                    //LSL - Logical Shift Left 
 	                    //A5.1.5 ARM Manual
+	                    // $display("%b",num12[6:5]);
 	                    if(num12[6:5]==2'b00)
 	                        begin
+	                          //$display("LSL");
+	                        //$display("here");
 	                        //if shift_imm ==0 
 	                            //shifter_operand = Rm
 	                            //Shifter_carry_out = C Flag
@@ -679,6 +684,7 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                end ///End of LSL
 	                     if(num12[6:5]==2'b01)
     	                     begin
+    	                     //$display("LSR");
             	                     //LSR - Logical Shift Right
             	                    //A5.1.7
             	                   // if shift_imm == 0 then
@@ -701,6 +707,7 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                   //Arithmetic Shift Right
 	                    if(num12[6:5]==2'b10)
     	                     begin
+    	                    // $display("Arithmetic Shift Right");
             	              // if shift_imm == 0 then
             	              if(num12[11:7]==4'b0000)
             	                    begin
@@ -732,6 +739,7 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                        //rotate right
 	                    if(num12[6:5]==2'b11)
 	                        begin
+	                        //$display("ROR");
             	                //if shift_imm == 0 then
             	                if(num12[11:7]==4'b0000)
                 	                begin
@@ -754,10 +762,12 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	        end
 	        3'b010:
 	            begin   
+	           // $display("Immediate Offset");
 	                result = 32'd0 + num12[11:0];
 	            end
             3'b011:
                 begin   
+             //   $display("Register Offset");
                     result = rm;
                 end
 		endcase		
