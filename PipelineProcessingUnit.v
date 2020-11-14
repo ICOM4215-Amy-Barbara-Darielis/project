@@ -168,7 +168,7 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, output reg IF_ID_
         //Initially no data hazard has been detected yet, standard register contents are passed in ID stage
         ForwardA <= 2'b11; 
         ForwardB <= 2'b00;
-        
+      
         //Will choose nearest stage to ID when Data hazard occurs
         //WB Forwarding
       if(WB_RF_enable)
@@ -1003,7 +1003,7 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
 endmodule
 
 module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I11_0, output reg [3:0] EX_I15_12, EX_ALU_op, output reg [2:0] EX_I27_25, output reg [1:0] EX_Data_Mem_Opcode, output reg EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, 
-  input [31:0] ID_Portn, ID_Portm, input [11:0] ID_I11_0, input [3:0] ID_I15_12, ID_ALU_op, input [2:0] I27_25, input [1:0] ID_Data_Mem_Opcode, input ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk,reset); 
+                     input [31:0] ID_Portm, ID_Portn, input [11:0] ID_I11_0, input [3:0] ID_I15_12, ID_ALU_op, input [2:0] I27_25, input [1:0] ID_Data_Mem_Opcode, input ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk,reset); 
   always @ (posedge Clk,reset)
      if(reset)
       begin
@@ -1131,7 +1131,7 @@ module Processing_pipeline_unit();
     wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTn, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
-    wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, MEM_Rn, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes;
+  wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes;
     wire [2:0] I27_25, EX_I27_25;
     wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB;
     wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S;
@@ -1145,7 +1145,7 @@ module Processing_pipeline_unit();
   ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, I31_0,reset);
   
     mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, 1'b0, 4'b0, 1'b0, 1'b0);   
-    Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, 
+  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, 
                                             EX_load_instr); 
     conditionhandler Condition_Handler(cond_output, oN,oZ,oC,oV, ID_B_instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
@@ -1157,7 +1157,7 @@ module Processing_pipeline_unit();
         mux_2x1_32b IF_mux(PCIN, cond_output, nextPC, TA);
         
     //IF/ID transition
-        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC, IF_ID_LE, cond_output, Clk,reset); 
+        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC,1'b1, cond_output, Clk,reset); 
 
     //Instuction Decodification Stage
         register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, WB_Rd, Clk, WB_load_instr, PCLE); //falta de donde viene C, a donde va POrtC, 
@@ -1168,8 +1168,7 @@ module Processing_pipeline_unit();
     
     //ID/EX transition
         //I15_12 =  Rd
-        IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_I11_0, EX_Rd, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, 
-                                    ID_PORTm, ID_PORTn, I11_0, ID_I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable,Clk, reset);
+        IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_I11_0, EX_Rd, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, ID_PORTm, ID_PORTn, I11_0, I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable,Clk, reset);
 
     //Execution stage
         mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, SSEresult, EX_PORTn); 
