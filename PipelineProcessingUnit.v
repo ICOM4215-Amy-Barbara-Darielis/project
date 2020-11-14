@@ -6,7 +6,7 @@
  *                    Control Unit                        *
  **********************************************************/
 module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, output reg B_Instr,  Shift_imm,  Load_instr,  RF_enable, input [31:0] I, input reset);
-  always @(I,reset) 
+  always @(I, posedge reset) 
     begin
     if(reset)
       begin
@@ -968,7 +968,7 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
     /*
     * Active when Clk goes up. Data is saved if IFID_write == 1.
     */
-  always @ (posedge Clk,reset)
+  always @ (posedge Clk, posedge reset)
     begin
     if(reset)
       begin
@@ -1006,8 +1006,8 @@ endmodule
 
 module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I11_0, output reg [3:0] EX_I15_12, EX_ALU_op, output reg [2:0] EX_I27_25, output reg [1:0] EX_Data_Mem_Opcode, output reg EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, 
                      input [31:0] ID_Portm, ID_Portn, input [11:0] ID_I11_0, input [3:0] ID_I15_12, ID_ALU_op, input [2:0] I27_25, input [1:0] ID_Data_Mem_Opcode, input ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk,reset); 
-  always @ (posedge Clk,reset)
-    begin
+  always @ (posedge Clk, posedge reset)
+    begin 
      if(reset)
       begin
        // $display("ID: IF");
@@ -1044,7 +1044,7 @@ endmodule
 
 module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] MEM_Cond_Codes, MEM_I15_12, output reg [1:0] MEM_Data_Mem_Opcode, output reg MEM_load_instr, MEM_RF_enable,
   input [31:0] EX_PORTn, EX_ALU_Res, input [3:0] EX_Cond_Codes, input [3:0] EX_I15_12, input [1:0] EX_Data_Mem_Opcode, input EX_load_instr, EX_RF_enable, Clk,reset); 
-  always @ (posedge Clk,reset)
+  always @ (posedge Clk, posedge reset)
     begin
      if(reset)
        		 begin
@@ -1073,7 +1073,7 @@ endmodule
 
 module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_I15_12, output reg WB_load_instr, WB_RF_enable,
   input [31:0] MEM_ALU_Res, Mem_Data, input [3:0] MEM_I15_12, input MEM_load_instr, MEM_RF_enable, Clk,reset); 
-  always @ (posedge Clk,reset)
+  always @ (posedge Clk,posedge reset)
       begin
         if(reset)
        		begin
