@@ -769,8 +769,12 @@ module DataReg (output reg[31:0] Q, input [31:0] D, input LE, Clk,reset);
 /*
  * 32-bit register. Active when Clk goes up. Data is saved if LE == 1.
  */
-    always @ (posedge Clk)
-        if (LE) Q <= D;
+  always @ (posedge Clk,posedge reset)
+    begin
+       if (LE) Q <= D;
+      if(reset) Q<= 32'b0;
+    end
+       
 endmodule
 
 //                    MULTIPLEXER 16x1
@@ -847,25 +851,26 @@ module register_file (output reg [31:0] PA, PB, PC, PCout, input [31:0] PD, PCIN
     wire tempPCLE;
   	reg [31:0] ProgramCounter;
 	assign PCout = ProgramCounter;
+  	
 
     // Embedded modules
     binary_decoder binaryDecoder (E, D, Ld); // Decoder
     // Registers
-  DataReg R0 (Qs[0], PD, E[0], Clk,reset);
-  DataReg R1 (Qs[1], PD, E[1], Clk,reset);
-  DataReg R2 (Qs[2], PD, E[2], Clk,reset);
-  DataReg R3 (Qs[3], PD, E[3], Clk,reset);
-  DataReg R4 (Qs[4], PD, E[4], Clk,reset);
-  DataReg R5 (Qs[5], PD, E[5], Clk,reset);
-  DataReg R6 (Qs[6], PD, E[6], Clk,reset);
-  DataReg R7 (Qs[7], PD, E[7], Clk,reset);
-  DataReg R8 (Qs[8], PD, E[8], Clk,reset);
-  DataReg R9 (Qs[9], PD, E[9], Clk,reset);
-  DataReg R10 (Qs[10], PD, E[10], Clk,reset);
-  DataReg R11 (Qs[11], PD, E[11], Clk,reset);
-  DataReg R12 (Qs[12], PD, E[12], Clk,reset);
-  DataReg R13 (Qs[13], PD, E[13], Clk,reset);
-  DataReg R14 (Qs[14], PD, E[14], Clk,reset);
+  DataReg R0 (Qs[0], PD, E[0], Clk,1'b0);
+  DataReg R1 (Qs[1], PD, E[1], Clk,1'b0);
+  DataReg R2 (Qs[2], PD, E[2], Clk,1'b0);
+  DataReg R3 (Qs[3], PD, E[3], Clk,1'b0);
+  DataReg R4 (Qs[4], PD, E[4], Clk,1'b0);
+  DataReg R5 (Qs[5], PD, E[5], Clk,1'b0);
+  DataReg R6 (Qs[6], PD, E[6], Clk,1'b0);
+  DataReg R7 (Qs[7], PD, E[7], Clk,1'b0);
+  DataReg R8 (Qs[8], PD, E[8], Clk,1'b0);
+  DataReg R9 (Qs[9], PD, E[9], Clk,1'b0);
+  DataReg R10 (Qs[10], PD, E[10], Clk,1'b0);
+  DataReg R11 (Qs[11], PD, E[11], Clk,1'b0);
+  DataReg R12 (Qs[12], PD, E[12], Clk,1'b0);
+  DataReg R13 (Qs[13], PD, E[13], Clk,1'b0);
+  DataReg R14 (Qs[14], PD, E[14], Clk,1'b0);
     
     //R15 input through  multiplexers
     mux_2x1_32b muxr15PCIN (tempPCIN, E[15], PCIN, PD);
