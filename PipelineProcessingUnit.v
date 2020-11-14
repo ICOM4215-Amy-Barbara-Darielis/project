@@ -765,7 +765,7 @@ endmodule
  **********************************************************/
 
 //                      REGISTER
-module DataReg (output reg[31:0] Q, input [31:0] D, input LE, Clk);
+module DataReg (output reg[31:0] Q, input [31:0] D, input LE, Clk,reset);
 /*
  * 32-bit register. Active when Clk goes up. Data is saved if LE == 1.
  */
@@ -838,7 +838,7 @@ module binary_decoder (output reg [15:0] E, input[3:0] C, input Ld);
 endmodule
 
 //                  REGISTER FILE
-module register_file (output reg [31:0] PA, PB, PC, PCout, input [31:0] PD, PCIN, input [3:0] A, B, C, D, input Clk, Ld, PCLE); 
+module register_file (output reg [31:0] PA, PB, PC, PCout, input [31:0] PD, PCIN, input [3:0] A, B, C, D, input Clk, Ld, PCLE,reset); 
     //PA-PC are three output ports, while PD is one input port.
     //Added extra PCLE and PCIN input for PC counter register R15. Added PC output and third port PC and it's selector C
     wire [15:0] E; //Encoder output to register Ld input, used for register selection during input
@@ -851,26 +851,26 @@ module register_file (output reg [31:0] PA, PB, PC, PCout, input [31:0] PD, PCIN
     // Embedded modules
     binary_decoder binaryDecoder (E, D, Ld); // Decoder
     // Registers
-    DataReg R0 (Qs[0], PD, E[0], Clk);
-    DataReg R1 (Qs[1], PD, E[1], Clk);
-    DataReg R2 (Qs[2], PD, E[2], Clk);
-    DataReg R3 (Qs[3], PD, E[3], Clk);
-    DataReg R4 (Qs[4], PD, E[4], Clk);
-    DataReg R5 (Qs[5], PD, E[5], Clk);
-    DataReg R6 (Qs[6], PD, E[6], Clk);
-    DataReg R7 (Qs[7], PD, E[7], Clk);
-    DataReg R8 (Qs[8], PD, E[8], Clk);
-    DataReg R9 (Qs[9], PD, E[9], Clk);
-    DataReg R10 (Qs[10], PD, E[10], Clk);
-    DataReg R11 (Qs[11], PD, E[11], Clk);
-    DataReg R12 (Qs[12], PD, E[12], Clk);
-    DataReg R13 (Qs[13], PD, E[13], Clk);
-    DataReg R14 (Qs[14], PD, E[14], Clk);
+  DataReg R0 (Qs[0], PD, E[0], Clk,reset);
+  DataReg R1 (Qs[1], PD, E[1], Clk,reset);
+  DataReg R2 (Qs[2], PD, E[2], Clk,reset);
+  DataReg R3 (Qs[3], PD, E[3], Clk,reset);
+  DataReg R4 (Qs[4], PD, E[4], Clk,reset);
+  DataReg R5 (Qs[5], PD, E[5], Clk,reset);
+  DataReg R6 (Qs[6], PD, E[6], Clk,reset);
+  DataReg R7 (Qs[7], PD, E[7], Clk,reset);
+  DataReg R8 (Qs[8], PD, E[8], Clk,reset);
+  DataReg R9 (Qs[9], PD, E[9], Clk,reset);
+  DataReg R10 (Qs[10], PD, E[10], Clk,reset);
+  DataReg R11 (Qs[11], PD, E[11], Clk,reset);
+  DataReg R12 (Qs[12], PD, E[12], Clk,reset);
+  DataReg R13 (Qs[13], PD, E[13], Clk,reset);
+  DataReg R14 (Qs[14], PD, E[14], Clk,reset);
     
     //R15 input through  multiplexers
     mux_2x1_32b muxr15PCIN (tempPCIN, E[15], PCIN, PD);
     mux_2x1_1b muxr15PCLE (tempPCLE, E[15], PCLE, 1'b1);
-    DataReg R15 (Qs[15], tempPCIN, tempPCLE, Clk);
+  DataReg R15 (Qs[15], tempPCIN, tempPCLE, Clk,reset);
     
     // Output of registers in input of multiplexers. Chooses register content to give to output ports
     mux_16x1 muxA (PA, A, Qs[0], Qs[1], Qs[2], Qs[3], Qs[4], Qs[5], Qs[6], Qs[7], Qs[8], Qs[9], Qs[10], Qs[11], Qs[12], Qs[13], Qs[14], Qs[15]);
@@ -1158,7 +1158,7 @@ module Processing_pipeline_unit();
         IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25, ID_S, DataOut, nextPC,1'b1, cond_output, Clk,reset); 
 
     //Instuction Decodification Stage
-        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, WB_Rd, Clk, WB_load_instr, PCLE); //falta de donde viene C, a donde va POrtC, 
+        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, WB_Rd, Clk, WB_load_instr, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
         Four_SE four_SE(fourSEout, I23_0); //4xSE
         adder TA_Adder (TA, ID_NextPC,fourSEout);
         mux_4x1_32b Mux_Rm(ID_PORTm, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA); 
