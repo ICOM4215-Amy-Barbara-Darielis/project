@@ -2,21 +2,21 @@
 // Course: ICOM4215
 // Project Name: Processing Pipeline Unit
 // Contributors:
-//		Amy Ayala
-// 		Barbara Gonzalez-Rivera
-// 		Darielis Morales Rodríguez
+//				Amy Ayala
+// 				Barbara Gonzalez-Rivera
+// 				Darielis Morales Rodríguez
 
 /**********************************************************
  *                    Control Unit                        *
  **********************************************************/
 module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, output reg B_Instr,  Shift_imm,  Load_instr,  RF_enable, ID_S, input [31:0] I, input reset);
+  // Control unit decodes instructions and provides appropiate control signals.
   reg invalid; //This bit will be set when invalid instructions are received
   always @(I, posedge reset)
     begin
     	invalid = 0;
     if(reset)
       begin
-       // $display("CU:IF");
         Data_Mem_Opcode = 2'b0;
         alu_Op = 3'b0;
         B_Instr = 1'b0;
@@ -27,7 +27,6 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
       end
     else
      begin 
-       // $display("CU:ELSE");
         alu_Op = I[24:21];
         Data_Mem_Opcode = 2'b00;
         Load_instr = 0;
@@ -44,7 +43,6 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                 	invalid = 1;
                 end
             Data_Mem_Opcode = 2'b10;
-            //$display("Changed Shift_imm");
             Shift_imm = 1;
             RF_enable = 1;
           end
@@ -134,12 +132,11 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         	end
        if(invalid)
          begin
-           //Invalid instruction behavior
            Data_Mem_Opcode = 2'b00;
            alu_Op = 3'b000;
            B_Instr = 0;
            Shift_imm = 0;
-           Load_instr = 0;
+           Load_instr = 1;
            RF_enable = 0;
            ID_S=0;
          end
@@ -151,8 +148,9 @@ endmodule
  *                  mux_8x4_32b                          *
  **********************************************************/
 module mux_8x4_32b(output reg Y_0,output reg [4:1] Y_1_4, output reg Y_5, Y_6, input S, A_0, input[4:1] A_1_4,input A_5, A_6, B_0,input[4:1] B_1_4,input B_5, B_6);
-    always @ (*)
-      
+    // This multiplexer chooses between two sets of 4 inputs.
+  // In our application it send zeroes for the control lines, instead of the the control unit output when there is control hazards.
+  always @ (*)    
       case (S)
         1'b0: 
           begin 
@@ -256,7 +254,11 @@ module conditionhandler(output reg cond_output,input condN,condZ,condC,condV, ID
                  4'b1101: cond_true = ((condN != condV) || !condZ);
                  4'b1110: cond_true = 1;
             endcase
-            if(cond_true && ID_B_instr) cond_output = 1;
+            if(cond_true && ID_B_instr) 
+              begin
+                cond_output = 1;
+              end
+          else cond_output = 0;
         end
 endmodule
 
@@ -631,7 +633,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 		//This instruction in the manual is said to be 001 
 		3'b001:
 			begin 
-			//$display("Immediate");
 			/**From the ARM manual
 			*shifter_operand = immed_8 Rotate_right (rotate_imm * 2)
 			*if rorate_imm == 0 then
@@ -660,11 +661,8 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                begin
 	                    //LSL - Logical Shift Left 
 	                    //A5.1.5 ARM Manual
-	                    // $display("%b",num12[6:5]);
 	                    if(num12[6:5]==2'b00)
 	                        begin
-	                          //$display("LSL");
-	                        //$display("here");
 	                        //if shift_imm ==0 
 	                            //shifter_operand = Rm
 	                            //Shifter_carry_out = C Flag
@@ -684,7 +682,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                end ///End of LSL
 	                     if(num12[6:5]==2'b01)
     	                     begin
-    	                     //$display("LSR");
             	                     //LSR - Logical Shift Right
             	                    //A5.1.7
             	                   // if shift_imm == 0 then
@@ -707,7 +704,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                   //Arithmetic Shift Right
 	                    if(num12[6:5]==2'b10)
     	                     begin
-    	                    // $display("Arithmetic Shift Right");
             	              // if shift_imm == 0 then
             	              if(num12[11:7]==4'b0000)
             	                    begin
@@ -739,7 +735,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	                        //rotate right
 	                    if(num12[6:5]==2'b11)
 	                        begin
-	                        //$display("ROR");
             	                //if shift_imm == 0 then
             	                if(num12[11:7]==4'b0000)
                 	                begin
@@ -762,12 +757,10 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
 	        end
 	        3'b010:
 	            begin   
-	           // $display("Immediate Offset");
 	                result = 32'd0 + num12[11:0];
 	            end
             3'b011:
                 begin   
-             //   $display("Register Offset");
                     result = rm;
                 end
 		endcase		
@@ -874,21 +867,21 @@ module register_file (output reg [31:0] PA, PB, PC, PCout, input [31:0] PD, PCIN
     // Embedded modules
     binary_decoder binaryDecoder (E, D, Ld); // Decoder
     // Registers
-  DataReg R0 (Qs[0], PD, E[0], Clk,1'b0);
-  DataReg R1 (Qs[1], PD, E[1], Clk,1'b0);
-  DataReg R2 (Qs[2], PD, E[2], Clk,1'b0);
-  DataReg R3 (Qs[3], PD, E[3], Clk,1'b0);
-  DataReg R4 (Qs[4], PD, E[4], Clk,1'b0);
-  DataReg R5 (Qs[5], PD, E[5], Clk,1'b0);
-  DataReg R6 (Qs[6], PD, E[6], Clk,1'b0);
-  DataReg R7 (Qs[7], PD, E[7], Clk,1'b0);
-  DataReg R8 (Qs[8], PD, E[8], Clk,1'b0);
-  DataReg R9 (Qs[9], PD, E[9], Clk,1'b0);
-  DataReg R10 (Qs[10], PD, E[10], Clk,1'b0);
-  DataReg R11 (Qs[11], PD, E[11], Clk,1'b0);
-  DataReg R12 (Qs[12], PD, E[12], Clk,1'b0);
-  DataReg R13 (Qs[13], PD, E[13], Clk,1'b0);
-  DataReg R14 (Qs[14], PD, E[14], Clk,1'b0);
+  DataReg R0 (Qs[0], PD, E[0], Clk,reset);
+  DataReg R1 (Qs[1], PD, E[1], Clk,reset);
+  DataReg R2 (Qs[2], PD, E[2], Clk,reset);
+  DataReg R3 (Qs[3], PD, E[3], Clk,reset);
+  DataReg R4 (Qs[4], PD, E[4], Clk,reset);
+  DataReg R5 (Qs[5], PD, E[5], Clk,reset);
+  DataReg R6 (Qs[6], PD, E[6], Clk,reset);
+  DataReg R7 (Qs[7], PD, E[7], Clk,reset);
+  DataReg R8 (Qs[8], PD, E[8], Clk,reset);
+  DataReg R9 (Qs[9], PD, E[9], Clk,reset);
+  DataReg R10 (Qs[10], PD, E[10], Clk,reset);
+  DataReg R11 (Qs[11], PD, E[11], Clk,reset);
+  DataReg R12 (Qs[12], PD, E[12], Clk,reset);
+  DataReg R13 (Qs[13], PD, E[13], Clk,reset);
+  DataReg R14 (Qs[14], PD, E[14], Clk,reset);
     
     //R15 input through  multiplexers
     mux_2x1_32b muxr15PCIN (tempPCIN, E[15], PCIN, PD);
@@ -1184,7 +1177,7 @@ module Processing_pipeline_unit();
     //Execution stage
         mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, SSEresult, EX_PORTn); 
         ALU ALU(EX_ALU_Res, condN,condZ,condC,condV, EX_PORTm, ALU_in_2, EX_ALU_op, OutCarry); 
-        shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_S, EX_PORTm, EX_I11_0, EX_I27_25, oC); 
+        shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_S, EX_PORTm, EX_I11_0, EX_I27_25, oC);
     
     //EX/MEM transition
         EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res,  MEM_Cond_Codes, MEM_Rd, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, 
@@ -1207,17 +1200,14 @@ module Processing_pipeline_unit();
   Address = 32'b00000000000000000000000000000000;
   while(!$feof(fi)) begin
     code = $fscanf(fi,"%b", data);
-    Instruction_Mem.Mem[Address] = data[31:24];
-    Instruction_Mem.Mem[Address+1] = data[23:16];
-    Instruction_Mem.Mem[Address+2] = data[15:8];
-    Instruction_Mem.Mem[Address+3] = data[7:0]; 
-    $display("IR: Address = %d, DataOut = %b%b%b%b", Address, Instruction_Mem.Mem[Address], Instruction_Mem.Mem[Address+1], Instruction_Mem.Mem[Address+2], Instruction_Mem.Mem[Address+3]);  
-    Address = Address + 4;
+    Instruction_Mem.Mem[Address] = data; 
+   // $display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[Address]);  
+    Address = Address + 1;
   end
   $fclose(fi);
 end  
 
-initial #300 $finish;
+initial #200 $finish;
   initial begin
     Clk = 0;
     forever #5 Clk = !Clk;
@@ -1230,14 +1220,18 @@ initial #300 $finish;
   end
 
         initial begin
-        // imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
-          $display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
-          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|     Clk| Time ");
-          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |     %b | %0d ",
+                // imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
+          //$display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
+         /* $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|  Clk| Time "); 
+          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |   %b | %0d ",
             currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
-            WB_load_instr, WB_RF_enable,
+            WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,
+            Clk, $time);*/
+         $display("    PC    |             I                  |           MEM_ALU_Res                   |                    R1                   |                     R2                  |                        R3               |                   R15             |Clk| Time "); 
+          $monitor("%d|%b|  %b       |  %b       |  %b       |  %b       |  %b | %d | %0d",
+            currentPC, DataOut, MEM_ALU_Res,Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q,Register_File.R15.Q,
             Clk, $time);
           end 
   
