@@ -9,7 +9,7 @@
 /**********************************************************
  *                    Control Unit                        *
  **********************************************************/
-module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, output reg B_Instr,  Shift_imm,  Load_instr,  RF_enable, ID_S, input [31:0] I, input reset);
+module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, output reg B_Instr,  Shift_imm,  Load_instr,  RF_enable, ID_S, Br_L_Instr, input [31:0] I, input reset);
   // Control unit decodes instructions and provides appropiate control signals.
   reg invalid; //This bit will be set when invalid instructions are received
   always @(I, posedge reset)
@@ -24,6 +24,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         Load_instr= 1'b0;
         RF_enable= 1'b0;
         ID_S = 1'b0;
+        Br_L_Instr = 1'b0;
       end
     else
      begin 
@@ -33,7 +34,8 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         Shift_imm = 0;
         B_Instr = 0;
         RF_enable = 0;
-       ID_S = I[20];
+       	ID_S = I[20];
+        Br_L_Instr = 1'b0;
         case (I[27:25])
         3'b000: 
           begin 
@@ -117,6 +119,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                   Data_Mem_Opcode = 2'b10;
                   B_Instr = 1;
                   RF_enable = 1;
+                  Br_L_Instr = 1;
               end
           end
         default:
@@ -132,6 +135,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         	end
        if(invalid)
          begin
+           //$display("invalid");
            Data_Mem_Opcode = 2'b00;
            alu_Op = 3'b000;
            B_Instr = 0;
@@ -139,6 +143,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
            Load_instr = 1;
            RF_enable = 0;
            ID_S=0;
+           Br_L_Instr = 1'b0;
          end
      end
      end 
@@ -230,11 +235,11 @@ endmodule
 /**********************************************************
  *                 Condition Handler                      *
  **********************************************************/
-module conditionhandler(output reg cond_output,input condN,condZ,condC,condV, ID_B_instr, input [3:0] CC);
+module conditionhandler(output reg cond_output, Br_L_asserted, input condN,condZ,condC,condV, ID_B_instr, ID_Br_L_Instr, input [3:0] CC);
   // Checks condition is met and returns cond_output= 1 if branch instruction indicator is asserted (1)
   // and conditional output according to necessary conditional code is met.
   reg cond_true;
-  always @ (condN,condZ,condC,condV, CC)
+  always @ (*)
         begin
             cond_true = 0;
             case(CC)
@@ -254,11 +259,16 @@ module conditionhandler(output reg cond_output,input condN,condZ,condC,condV, ID
                  4'b1101: cond_true = ((condN != condV) || !condZ);
                  4'b1110: cond_true = 1;
             endcase
-            if(cond_true && ID_B_instr) 
-              begin
-                cond_output = 1;
-              end
-          else cond_output = 0;
+          if(cond_true && ID_B_instr) 
+            cond_output = 1;
+          else 
+            cond_output = 0;
+          
+          if(cond_true && ID_Br_L_Instr)
+            Br_L_asserted = 1;
+          else
+            Br_L_asserted = 0;
+          $display("%b, %b, %b", cond_true, CC, cond_output );
         end
 endmodule
 
@@ -267,22 +277,22 @@ endmodule
  *              Current Program Status Register           *
  **********************************************************/
 module CPSR(output reg oN,oZ,oC,oV,input iS,iN,iC,iZ,iV);
-
-        always @ (*)
-            begin
-                oN = 1'b0; 
-                oZ = 1'b0; 
-                oC = 1'b0; 
-                oV = 1'b0; 
-            if(iS)
-                begin
-                    oN = iN;
-                    oZ = iZ;
-                    oC = iC;
-                    oV = iV;
-                end
-            end
-    
+  reg N=0;
+  reg Z=0;
+  reg C=0;
+  reg V=0;
+  assign oN = N;
+  assign oZ = Z;
+  assign oC = C;
+  assign oV = V;
+  always @ (*)
+    if(iS)
+      begin
+        N = iN;
+        Z = iZ;
+        C = iC;
+        V = iV;
+      end
 endmodule
 
 /**
@@ -782,7 +792,7 @@ module DataReg (output reg[31:0] Q, input [31:0] D, input LE, Clk,reset);
  */
   always @ (posedge Clk,posedge reset)
     begin
-       if (LE) Q <= D;
+      if (LE) Q <= D;
       if(reset) Q<= 32'b0;
     end
        
@@ -1016,8 +1026,8 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
     end
 endmodule
 
-module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I11_0, output reg [3:0] EX_I15_12, EX_ALU_op, output reg [2:0] EX_I27_25, output reg [1:0] EX_Data_Mem_Opcode, output reg EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, 
-                     input [31:0] ID_Portm, ID_Portn, input [11:0] ID_I11_0, input [3:0] ID_I15_12, ID_ALU_op, input [2:0] I27_25, input [1:0] ID_Data_Mem_Opcode, input ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Clk,reset); 
+module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, EX_NextPC, output reg [11:0] EX_I11_0, output reg [3:0] EX_I15_12, EX_ALU_op, output reg [2:0] EX_I27_25, output reg [1:0] EX_Data_Mem_Opcode, output reg EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, EX_Br_L_asserted,
+                     input [31:0] ID_Portm, ID_Portn, ID_NextPC, input [11:0] ID_I11_0, input [3:0] ID_I15_12, ID_ALU_op, input [2:0] I27_25, input [1:0] ID_Data_Mem_Opcode, input ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Br_L_asserted, Clk,reset); 
   always @ (posedge Clk, posedge reset)
     begin 
      if(reset)
@@ -1033,6 +1043,8 @@ module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I
             EX_S <=  1'b0;
             EX_I27_25 <= 2'b0;
             EX_Data_Mem_Opcode <= 2'b0;
+        	EX_NextPC <= 32'b0;
+        	EX_Br_L_asserted <= 32'b0;
       end
     else
          begin
@@ -1047,24 +1059,28 @@ module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, output reg [11:0] EX_I
             EX_S <= ID_S;
             EX_I27_25 <= I27_25;
             EX_Data_Mem_Opcode <= ID_Data_Mem_Opcode;
+            EX_NextPC <= ID_NextPC;
+            EX_Br_L_asserted <= Br_L_asserted;
         end
       end
  
 endmodule
 
-module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] MEM_Cond_Codes, MEM_I15_12, output reg [1:0] MEM_Data_Mem_Opcode, output reg MEM_load_instr, MEM_RF_enable,
-  input [31:0] EX_PORTn, EX_ALU_Res, input [3:0] EX_Cond_Codes, input [3:0] EX_I15_12, input [1:0] EX_Data_Mem_Opcode, input EX_load_instr, EX_RF_enable, Clk,reset); 
+module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, output reg [3:0] MEM_Cond_Codes, MEM_I15_12, output reg [1:0] MEM_Data_Mem_Opcode, output reg MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
+                      input [31:0] EX_PORTn, EX_ALU_Res, EX_NextPC, input [3:0] EX_Cond_Codes, input [3:0] EX_I15_12, input [1:0] EX_Data_Mem_Opcode, input EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset); 
   always @ (posedge Clk, posedge reset)
     begin
      if(reset)
        		 begin
-             MEM_PORTn = 32'b0;
-       		 MEM_ALU_Res = 32'b0;
-       		 MEM_Cond_Codes = 4'b0;
+             MEM_PORTn <= 32'b0;
+       		 MEM_ALU_Res <= 32'b0;
+             MEM_NextPC <= 32'b0;
+       		 MEM_Cond_Codes <= 4'b0;
        		 MEM_I15_12 = 4'b0;
-       		 MEM_load_instr =1'b0;
-       		 MEM_Data_Mem_Opcode = 2'b0;
-        	 MEM_RF_enable = 1'b0;
+       		 MEM_load_instr <= 1'b0;
+       		 MEM_Data_Mem_Opcode <= 2'b0;
+        	 MEM_RF_enable <= 1'b0;
+             MEM_Br_L_asserted <=1'b0;
       		end
     else
       begin
@@ -1075,21 +1091,25 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res, output reg [3:0] 
         MEM_load_instr <=EX_load_instr;
         MEM_Data_Mem_Opcode <= EX_Data_Mem_Opcode;
         MEM_RF_enable <= EX_RF_enable;
+        MEM_NextPC <= EX_NextPC;
+        MEM_Br_L_asserted <= EX_Br_L_asserted;
         end
       end
 endmodule
 
-module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_I15_12, output reg WB_load_instr, WB_RF_enable,
-  input [31:0] MEM_ALU_Res, Mem_Data, input [3:0] MEM_I15_12, input MEM_load_instr, MEM_RF_enable, Clk,reset); 
+module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, WB_NextPC, output reg [3:0] WB_I15_12, output reg WB_load_instr, WB_RF_enable, WB_Br_L_asserted,
+                      input [31:0] MEM_ALU_Res, Mem_Data, MEM_NextPC, input [3:0] MEM_I15_12, input MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted, Clk,reset); 
   always @ (posedge Clk,posedge reset)
       begin
         if(reset)
        		begin
             WB_ALU_Res <= 32'b0;
             WB_Data <= 32'b0;
+            WB_NextPC <= 32'b0;
             WB_I15_12 <= 4'b0;
             WB_load_instr <= 1'b0;
             WB_RF_enable <= 1'b0;
+            WB_Br_L_asserted <= 1'b0;
       		end
     else
       begin
@@ -1098,6 +1118,8 @@ module MEMWBRegister (output reg[31:0] WB_ALU_Res, WB_Data, output reg [3:0] WB_
             WB_I15_12 <= MEM_I15_12;
             WB_load_instr <= MEM_load_instr;
             WB_RF_enable <= MEM_RF_enable;
+        	WB_NextPC <= MEM_NextPC;
+        	WB_Br_L_asserted <= MEM_Br_L_asserted;
      	 end
       end
 endmodule
@@ -1113,7 +1135,31 @@ module mux_4x1_32b (output reg [31:0] Y, input[1:0] S, input [31:0] a, b, c, d);
         endcase
 endmodule
 
-module Processing_pipeline_unit();
+//                  32-BIT MULTIPLEXER 3x1
+module mux_3x1_32b (output reg [31:0] Y, input S0, S1, input [31:0] a, b, c);
+  //Specific multiplexer used for Write-Back stage. Chooses between providing the ouput of the ALU result in a data-processing instruction, the Data Memory in a Load instruction, or the PC+4 for the LINK register (R14). S0 is load bit and S1 is BL asserted bit. a is ALU result, b is memory output, c is PC+4.
+    always @ (*)
+      begin
+      	if(S0)
+        	Y = b; //load = 1
+      	else if(S1)
+    		Y = c; //branch link asserted
+  	  	else
+        	Y = a; // neither load nor branch link is asserted use ALU result (both are never asserted at the same time)
+      end
+endmodule
+
+//                  4-BIT MULTIPLEXER 2x1
+module mux_2x1_4b(output reg [3:0] Y, input S, input [3:0] A, input [3:0] B);
+      always @ (*)
+      begin
+        if (S) Y = B;
+        else Y = A;
+      end
+endmodule
+
+
+module Processing_Pipeline_Unit();
     
     //Precharge
     reg [31:0] DataIn = 32'b0;
@@ -1131,14 +1177,14 @@ module Processing_pipeline_unit();
     // Wires
     wire [31:0] DataOut, I31_0;
     wire [31:0] PortC; //????
-  wire [31:0] nextPC, currentPC, PCIN, ID_NextPC, fourSEout, TA;
+  wire [31:0] nextPC, currentPC, PCIN, ID_NextPC, EX_NextPC, MEM_NextPC, WB_NextPC, fourSEout, TA;
     wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTn, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
-  wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes;
+  wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes, RF_In_Port;
     wire [2:0] I27_25, EX_I27_25;
     wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB;
-    wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S;
+    wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S, ID_Br_L_Instr, EX_Br_L_Instr, Br_L_asserted, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted;
     wire oN,oZ,oC,oV, cond_output, condN,condZ,condC,condV, OutCarry;
  
   	reg reset = 1;
@@ -1146,12 +1192,11 @@ module Processing_pipeline_unit();
 
     //Embedded modules
     
-  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, ID_S, I31_0,reset);
+  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, ID_S, ID_Br_L_Instr, I31_0,reset);
   
     mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, 1'b0, 4'b0, 1'b0, 1'b0);   
-  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, 
-                                            EX_load_instr); 
-    conditionhandler Condition_Handler(cond_output, oN,oZ,oC,oV, ID_B_instr, I31_28);
+  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr); 
+  conditionhandler Condition_Handler(cond_output, Br_L_asserted, oN,oZ,oC,oV, ID_B_instr, ID_Br_L_Instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
 
     //Instruction Fetch stage
@@ -1164,7 +1209,7 @@ module Processing_pipeline_unit();
         IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25,  DataOut, nextPC,1'b1, cond_output, Clk,reset); 
 
     //Instuction Decodification Stage
-        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, WB_Rd, Clk, WB_load_instr, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
+        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, RF_In_Port, Clk, WB_load_instr, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
         Four_SE four_SE(fourSEout, I23_0); //4xSE
         adder TA_Adder (TA, ID_NextPC,fourSEout);
         mux_4x1_32b Mux_Rm(ID_PORTm, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA); 
@@ -1172,7 +1217,7 @@ module Processing_pipeline_unit();
     
     //ID/EX transition
         //I15_12 =  Rd
-        IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_I11_0, EX_Rd, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, ID_PORTm, ID_PORTn, I11_0, I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable,Clk, reset);
+  IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_NextPC, EX_I11_0, EX_Rd, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, ID_PORTm, ID_PORTn, ID_NextPC, I11_0, I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Br_L_asserted, Clk, reset);
 
     //Execution stage
         mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, SSEresult, EX_PORTn); 
@@ -1180,8 +1225,8 @@ module Processing_pipeline_unit();
         shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_S, EX_PORTm, EX_I11_0, EX_I27_25, oC);
     
     //EX/MEM transition
-        EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res,  MEM_Cond_Codes, MEM_Rd, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, 
-                                    EX_PORTn, EX_ALU_Res, EX_Cond_Codes, EX_Rd, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, Clk,reset);
+  EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res, MEM_NextPC, MEM_Cond_Codes, MEM_Rd, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
+                                    EX_PORTn, EX_ALU_Res, EX_NextPC, EX_Cond_Codes, EX_Rd, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset);
 
     //Memory stage
         data_ram256x8 Data_Mem(Mem_Data, Enable, !MEM_load_instr, MEM_ALU_Res, DataIn, MEM_Data_Mem_Opcode); //Writes when MEM_load_instr==0.
@@ -1189,11 +1234,12 @@ module Processing_pipeline_unit();
 
 
     //MEM/WB transition
-        MEMWBRegister MEM_WB_Register(WB_ALU_Res, WB_Data, WB_Rd,  WB_load_instr, WB_RF_enable, MEM_ALU_Res, Mem_Data,  MEM_Rd,  MEM_load_instr, MEM_RF_enable, Clk,reset);
+  MEMWBRegister MEM_WB_Register(WB_ALU_Res, WB_Data, WB_NextPC, WB_Rd,  WB_load_instr, WB_RF_enable, WB_Br_L_asserted, MEM_ALU_Res, Mem_Data, MEM_NextPC, MEM_Rd,  MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted, Clk,reset);
 
     //Write-Back Stage
-        mux_2x1_32b WB_mux(PortWrite, WB_load_instr, WB_ALU_Res, WB_Data);
-  
+  mux_3x1_32b WB_Content_mux(PortWrite, WB_load_instr, WB_Br_L_asserted, WB_ALU_Res, WB_Data, WB_NextPC);
+  mux_2x1_4b Link_mux(RF_In_Port, WB_Br_L_asserted, WB_Rd, 4'd14);
+   
   //PRECHARGE
   initial begin
   fi = $fopen("input_file.txt","r");
@@ -1222,17 +1268,30 @@ initial #200 $finish;
         initial begin
                 // imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
           //$display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
+          
          /* $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|  Clk| Time "); 
           $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |   %b | %0d ",
             currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
             WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,
-            Clk, $time);*/
+                   Clk, $time);*/
+          
+/*Official display 
          $display("    PC    |             I                  |           MEM_ALU_Res                   |                    R1                   |                     R2                  |                        R3               |                   R15             |Clk| Time "); 
           $monitor("%d|%b|  %b       |  %b       |  %b       |  %b       |  %b | %d | %0d",
-            currentPC, DataOut, MEM_ALU_Res,Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q,Register_File.R15.Q,
+            currentPC, DataOut, MEM_ALU_Res,Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q, Register_File.R15.Q,
             Clk, $time);
+*/ 
+          //AMYS DISPLAYYYYY
+          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|  Clk| Time  | R14"); 
+          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |   %b | %0d |",
+            currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
+            EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
+            MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
+            WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,
+                   Clk, $time, );
+           
           end 
   
 endmodule
