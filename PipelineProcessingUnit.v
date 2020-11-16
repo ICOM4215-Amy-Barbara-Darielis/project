@@ -306,32 +306,6 @@ module CPSR(output reg oN,oZ,oC,oV,input iS,iN,iC,iZ,iV);
         V = iV;
       end
 endmodule
-
-/**
-module CPSRtest;
-    reg iS,iN,iC,iZ,iV;
-    wire oN,oZ,oC,oV;
-    CPSR test(oN,oZ,oC,oV,iS,iN,iC,iZ,iV);
-
-  initial #100 $finish;
-  
-  initial fork
-    iN = 1'b0; 
-    iZ = 1'b1;
-    iC = 1'b1; 
-    iV = 1'b0;
-    iS = 1'b0;
-    #1 iS = 1'b1;
-  join
-  initial begin
-    $display ("SR: N Z C V S  Nf Zf Cf Vf           Time:");
-    $monitor ("    %b %b %b %b %b  %b  %b  %b  %b  %d ", iN, iZ, iC, iV, iS, oN, oZ, oC, oV,  $time); 
-  
-  end
-
-//end of ALUtest
-endmodule
-**/
  
 /**********************************************************
  *                         ALU                            *
