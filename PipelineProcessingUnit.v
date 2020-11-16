@@ -614,7 +614,7 @@ endmodule
 /**********************************************************
  *                   Shifter/Sign Extender                *
  **********************************************************/
-module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output reg S, input[31:0] rm, input [11:0] num12, input[2:0] missingInst, input InCarry);
+module shifterSignExtender(output reg [31:0] result, output reg OutCarry,  input[31:0] rm, input [11:0] num12, input[2:0] missingInst, input InCarry);
 	//Since we are working with movement of stuff we need a temporary register
 	//to not loose vital information
 	reg [31:0] tempReg;
@@ -760,7 +760,6 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output
                     result = rm;
                 end
 		endcase		
-    S = result[20];
 	//end of begin 1
 	end
 //shift by immediate (second //since we need to execute a block of codes, aka run more than one expression, we use begin-end
@@ -1052,8 +1051,8 @@ module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, EX_NextPC, output reg 
  
 endmodule
 
-module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, output reg [3:0] MEM_Cond_Codes, MEM_I15_12, output reg [1:0] MEM_Data_Mem_Opcode, output reg MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
-                      input [31:0] EX_PORTn, EX_ALU_Res, EX_NextPC, input [3:0] EX_Cond_Codes, input [3:0] EX_I15_12, input [1:0] EX_Data_Mem_Opcode, input EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset); 
+module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, MEM_I15_12, output reg [1:0] MEM_Data_Mem_Opcode, output reg MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
+                      input [31:0] EX_PORTn, EX_ALU_Res, EX_NextPC, input [3:0] EX_I15_12, input [1:0] EX_Data_Mem_Opcode, input EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset); 
   always @ (posedge Clk, posedge reset)
     begin
      if(reset)
@@ -1061,7 +1060,6 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, outp
              MEM_PORTn <= 32'b0;
        		 MEM_ALU_Res <= 32'b0;
              MEM_NextPC <= 32'b0;
-       		 MEM_Cond_Codes <= 4'b0;
        		 MEM_I15_12 = 4'b0;
        		 MEM_load_instr <= 1'b0;
        		 MEM_Data_Mem_Opcode <= 2'b0;
@@ -1072,7 +1070,6 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, outp
       begin
         MEM_PORTn <= EX_PORTn;
         MEM_ALU_Res <= EX_ALU_Res;
-        MEM_Cond_Codes <= EX_Cond_Codes;
         MEM_I15_12 <= EX_I15_12;
         MEM_load_instr <=EX_load_instr;
         MEM_Data_Mem_Opcode <= EX_Data_Mem_Opcode;
@@ -1167,7 +1164,7 @@ module Processing_Pipeline_Unit();
     wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTn, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
-  wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes, RF_In_Port;
+  wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, RF_In_Port;
     wire [2:0] I27_25, EX_I27_25;
     wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB;
     wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S, ID_Br_L_Instr, EX_Br_L_Instr, Br_L_asserted, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, Bit_S;
@@ -1208,14 +1205,14 @@ module Processing_Pipeline_Unit();
     //Execution stage
         mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, SSEresult, EX_PORTn); 
         ALU ALU(EX_ALU_Res, condN,condZ,condC,condV, EX_PORTm, ALU_in_2, EX_ALU_op, OutCarry); 
-        shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_S, EX_PORTm, EX_I11_0, EX_I27_25, oC);
+        shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_PORTm, EX_I11_0, EX_I27_25, oC);
     
     //EX/MEM transition
-  EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res, MEM_NextPC, MEM_Cond_Codes, MEM_Rd, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
-                                    EX_PORTn, EX_ALU_Res, EX_NextPC, EX_Cond_Codes, EX_Rd, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset);
+  EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res, MEM_NextPC, MEM_Rd, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
+                                    EX_PORTn, EX_ALU_Res, EX_NextPC, EX_Rd, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset);
 
     //Memory stage
-        data_ram256x8 Data_Mem(Mem_Data, Enable, !MEM_load_instr, MEM_ALU_Res, DataIn, MEM_Data_Mem_Opcode); //Writes when MEM_load_instr==0.
+  data_ram256x8 Data_Mem(Mem_Data, Enable, !MEM_load_instr, MEM_ALU_Res, MEM_PORTn, MEM_Data_Mem_Opcode); //Writes when MEM_load_instr==0.
         mux_2x1_32b MEM_mux(MEM_data_fwd, MEM_load_instr, MEM_ALU_Res, Mem_Data);
 
 
@@ -1270,14 +1267,14 @@ initial #200 $finish;
             Clk, $time);
 */
           //AMYS DISPLAYYYYY
-          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
+         $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
           $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |  %b |  %b | %0d |",
             currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
             WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,Bit_S,
                    Clk, $time, );
-  //        $monitor("I:%b  Br:%b   S:%b",DataOut, ID_Br_L_Instr, ID_S);
+        //$monitor("I:%b  Br:%b   S:%b",DataOut, ID_Br_L_Instr, ID_S);
            
           end 
   
