@@ -45,7 +45,6 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                 	invalid = 1;
                 end
             Data_Mem_Opcode = 2'b10;
-            Shift_imm = 1;
             RF_enable = 1;
        //$display("I:%b  br:%b",I, Br_L_Instr);
           end
@@ -58,6 +57,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
             	end
             Data_Mem_Opcode = 2'b10;
             RF_enable = 1;
+            Shift_imm = 1;
           //$display("I:%b  br:%b",I, Br_L_Instr);
           end
         3'b010:            //no invalid instructions
@@ -71,7 +71,6 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                   else 
                      Data_Mem_Opcode = 2'b00;
             //    $display("I:%b  br:%b",I, Br_L_Instr);
-
                 end
             else 
                 begin
@@ -144,7 +143,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         	end
        if(invalid)
          begin
-          // $display("invalid");
+         // $display("invalid");
            Data_Mem_Opcode = 2'b00;
            alu_Op = 3'b000;
            B_Instr = 0;
@@ -155,7 +154,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
            Br_L_Instr = 1'b0;
          end
      end
-    // $display("%b", ID_S);
+      //$display("%b", Shift_imm);
 
      end 
 endmodule
@@ -1295,14 +1294,14 @@ initial #200 $finish;
           $monitor("%d|%b|  %b       |  %b       |  %b       |  %b       |  %b | %d | %0d",
             currentPC, DataOut, MEM_ALU_Res,Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q, Register_File.R15.Q,
             Clk, $time);
-*/ 
+*/
           //AMYS DISPLAYYYYY
-          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|  Clk| Time  | R14"); 
-          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |   %b | %0d |",
+          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
+          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |  %b |  %b | %0d |",
             currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
-            WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,
+            WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,Bit_S,
                    Clk, $time, );
   //        $monitor("I:%b  Br:%b   S:%b",DataOut, ID_Br_L_Instr, ID_S);
            
