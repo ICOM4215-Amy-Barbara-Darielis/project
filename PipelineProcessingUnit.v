@@ -35,7 +35,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         B_Instr = 0;
         RF_enable = 0;
        	ID_S = I[20];
-        Br_L_Instr = 1'b0;
+        Br_L_Instr = 0;
         case (I[27:25])
         3'b000: 
           begin 
@@ -47,6 +47,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
             Data_Mem_Opcode = 2'b10;
             Shift_imm = 1;
             RF_enable = 1;
+       //$display("I:%b  br:%b",I, Br_L_Instr);
           end
         3'b001: 
           begin
@@ -57,6 +58,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
             	end
             Data_Mem_Opcode = 2'b10;
             RF_enable = 1;
+          //$display("I:%b  br:%b",I, Br_L_Instr);
           end
         3'b010:            //no invalid instructions
           begin
@@ -68,11 +70,14 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                      Data_Mem_Opcode = 2'b10;
                   else 
                      Data_Mem_Opcode = 2'b00;
+            //    $display("I:%b  br:%b",I, Br_L_Instr);
+
                 end
             else 
                 begin
                 alu_Op = 4'b0100;
                 RF_enable = 1;
+          // $display("I:%b  br:%b",I, Br_L_Instr);
                 if(I[22] == 0) //b==0
                      Data_Mem_Opcode = 2'b10;
                 else 
@@ -100,6 +105,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
               begin
                 alu_Op = 4'b0100;
                 RF_enable = 1;
+              //  $display("I:%b B:%b  RF:%b br:%b",I,B_Instr,RF_enable, Br_L_Instr);
                 if(I[22] == 0) //b==0 
                      Data_Mem_Opcode = 2'b10;
                   else 
@@ -109,10 +115,12 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         3'b101:             //no invalid instructions
           begin
             ID_S = 0;
-            if(I[24] == 0) 
+            Br_L_Instr = I[24];
+              if(I[24] == 0) 
               begin
                   Data_Mem_Opcode = 2'b10;
                   B_Instr = 1;
+                //$display("I:%b B:%b  RF:%b br:%b",I,B_Instr,RF_enable, Br_L_Instr);
               end 
             else 
               begin
@@ -120,6 +128,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                   B_Instr = 1;
                   RF_enable = 1;
                   Br_L_Instr = 1;
+               // $display("I:%b B:%b  RF:%b br:%b",I,B_Instr,RF_enable, Br_L_Instr);
               end
           end
         default:
@@ -135,7 +144,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         	end
        if(invalid)
          begin
-           //$display("invalid");
+          // $display("invalid");
            Data_Mem_Opcode = 2'b00;
            alu_Op = 3'b000;
            B_Instr = 0;
@@ -146,32 +155,36 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
            Br_L_Instr = 1'b0;
          end
      end
+    // $display("%b", ID_S);
+
      end 
 endmodule
 
 /**********************************************************
  *                  mux_8x4_32b                          *
  **********************************************************/
-module mux_8x4_32b(output reg Y_0,output reg [4:1] Y_1_4, output reg Y_5, Y_6, input S, A_0, input[4:1] A_1_4,input A_5, A_6, B_0,input[4:1] B_1_4,input B_5, B_6);
+module mux_8x4_32b(output reg Y_0,output reg [4:1] Y_1_4, output reg Y_5, Y_6,Y_7,Y_8, input S, A_0, input[4:1] A_1_4,input A_5, A_6, A_7, A_8, B_0,input[4:1] B_1_4,input B_5, B_6,B_7,B_8);
     // This multiplexer chooses between two sets of 4 inputs.
   // In our application it send zeroes for the control lines, instead of the the control unit output when there is control hazards.
-  always @ (*)    
+  always @ (*) 
       case (S)
         1'b0: 
           begin 
-             
           Y_0 = A_0;
           Y_1_4 = A_1_4;
           Y_5 = A_5;
           Y_6 = A_6;
+          Y_7 = A_7;
+          Y_8 = A_8;
           end
         1'b1: 
           begin 
-             
           Y_0 = B_0;
           Y_1_4 = B_1_4;
           Y_5 = B_5;
           Y_6 = B_6;
+          Y_7 = B_7;
+          Y_8 = B_8;
           end 
       endcase
 endmodule
@@ -268,7 +281,7 @@ module conditionhandler(output reg cond_output, Br_L_asserted, input condN,condZ
             Br_L_asserted = 1;
           else
             Br_L_asserted = 0;
-          $display("%b, %b, %b", cond_true, CC, cond_output );
+         // $display("%b, %b, %b", cond_true, CC, cond_output );
         end
 endmodule
 
@@ -1184,7 +1197,7 @@ module Processing_Pipeline_Unit();
   wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes, RF_In_Port;
     wire [2:0] I27_25, EX_I27_25;
     wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB;
-    wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S, ID_Br_L_Instr, EX_Br_L_Instr, Br_L_asserted, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted;
+    wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S, ID_Br_L_Instr, EX_Br_L_Instr, Br_L_asserted, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, Bit_S;
     wire oN,oZ,oC,oV, cond_output, condN,condZ,condC,condV, OutCarry;
  
   	reg reset = 1;
@@ -1192,9 +1205,9 @@ module Processing_Pipeline_Unit();
 
     //Embedded modules
     
-  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, ID_S, ID_Br_L_Instr, I31_0,reset);
+  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, Bit_S, ID_Br_L_Instr, I31_0,reset);
   
-    mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, 1'b0, 4'b0, 1'b0, 1'b0);   
+  mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, EX_Br_L_Instr,ID_S, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, ID_Br_L_Instr, Bit_S, 1'b0, 4'b0, 1'b0, 1'b0, 1'b0, 1'b0);   
   Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr); 
   conditionhandler Condition_Handler(cond_output, Br_L_asserted, oN,oZ,oC,oV, ID_B_instr, ID_Br_L_Instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
@@ -1247,7 +1260,7 @@ module Processing_Pipeline_Unit();
   while(!$feof(fi)) begin
     code = $fscanf(fi,"%b", data);
     Instruction_Mem.Mem[Address] = data; 
-   // $display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[Address]);  
+   //$display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[Address]);  
     Address = Address + 1;
   end
   $fclose(fi);
@@ -1291,6 +1304,7 @@ initial #200 $finish;
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
             WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,
                    Clk, $time, );
+  //        $monitor("I:%b  Br:%b   S:%b",DataOut, ID_Br_L_Instr, ID_S);
            
           end 
   
