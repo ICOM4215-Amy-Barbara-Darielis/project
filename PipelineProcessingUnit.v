@@ -13,143 +13,121 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
   // Control unit decodes instructions and provides appropiate control signals.
   reg invalid; //This bit will be set when invalid instructions are received
   always @(I, posedge reset)
+      
     begin
-    	invalid = 0;
-    if(reset)
-      begin
-        Data_Mem_Opcode = 2'b0;
-        alu_Op = 3'b0;
-        B_Instr = 1'b0;
-        Shift_imm = 1'b0;
-        Load_instr= 1'b1;
-        RF_enable= 1'b0;
-        ID_S = 1'b0;
-        Br_L_Instr = 1'b0;
-      end
-    else
-     begin 
-        alu_Op = I[24:21];
-        Data_Mem_Opcode = 2'b00;
-        Load_instr = 0;
-        Shift_imm = 0;
-        B_Instr = 0;
-        RF_enable = 0;
-       	ID_S = I[20];
-        Br_L_Instr = 0;
-        case (I[27:25])
-        3'b000: 
-          begin 
-             Load_instr = 1;
-            //Check for invalid instructions
-            if( I[4] == 1 || (I[20] == 0 && I[24:23] == 2'b10) || (I[11:7] == 5'b00000 && (I[6:5] == 2'b00 || I[6:5] == 2'b11)) ) //Last OR(AND(OR) operation to filter invalid shifter operands(data processing instructions)
-              	begin
-                	invalid = 1;
-                end
-            Data_Mem_Opcode = 2'b10;
-            RF_enable = 1;
-          end
-        3'b001: 
-          begin
-            Load_instr = 1;
-            //Check for invalid instructions
-            if( I[24:23] == 2'b10 && (I[21:20] == 2'b00 || I[21:20] == 2'b10) )
-            	begin
-                	invalid = 1;
-            	end
-            Data_Mem_Opcode = 2'b10;
-            RF_enable = 1;
-            Shift_imm = 1;
-          end
-        3'b010:            //no invalid instructions
-          begin
-            Load_instr= I[20];
-            ID_S = 0;
-            if(Load_instr == 0) 
-                begin
-                if(I[22] == 0) //b==0
-                     Data_Mem_Opcode = 2'b10;
-                  else 
-                     Data_Mem_Opcode = 2'b00;
-                end
-            else 
-                begin
-                alu_Op = 4'b0100;
-                RF_enable = 1;
-                if(I[22] == 0) //b==0
-                     Data_Mem_Opcode = 2'b10;
-                else 
-                     Data_Mem_Opcode = 2'b00;
-                end
-          end
-        3'b011:
-          begin
-             ID_S = 0;
-            //Check for invalid instructions
-            if(I[4]==1)
-            	begin
-                	invalid=1;
-            	end
-            
-            Load_instr= I[20];
-            if(Load_instr == 0) 
-              begin
-                if(I[22] == 0) //b==0
-                     Data_Mem_Opcode = 2'b10;
-                else 
-                     Data_Mem_Opcode = 2'b00;
-              end 
-            else 
-              begin
-                alu_Op = 4'b0100;
-                RF_enable = 1;
-                if(I[22] == 0) //b==0 
-                     Data_Mem_Opcode = 2'b10;
-                  else 
-                     Data_Mem_Opcode = 2'b00;
-              end
-          end
-        3'b101:             //no invalid instructions
-          begin
-            Load_instr = 1;
-            ID_S = 0;
-            Br_L_Instr = I[24];
-              if(I[24] == 0) 
-              begin
-                  Data_Mem_Opcode = 2'b10;
-                  B_Instr = 1;
-              end 
-            else 
-              begin
-                  Data_Mem_Opcode = 2'b10;
-                  B_Instr = 1;
-                  RF_enable = 1;
-              end
-          end
-        default:
-            //Check for invalid instructions that do not match any other format
-            begin
-            	invalid = 1;
+          invalid = 0;
+      if(reset)
+        begin
+          Data_Mem_Opcode = 2'b0;
+          alu_Op = 3'b0;
+          B_Instr = 1'b0;
+          Shift_imm = 1'b0;
+          Load_instr= 1'b1;
+          RF_enable= 1'b0;
+          ID_S = 1'b0;
+          Br_L_Instr = 1'b0;
+        end
+      else
+       begin 
+          alu_Op = I[24:21];
+          Data_Mem_Opcode = 2'b00;
+          Load_instr = 0;
+          Shift_imm = 0;
+          B_Instr = 0;
+          RF_enable = 0;
+          ID_S = I[20];
+          Br_L_Instr = 0;
+          case (I[27:25])
+          3'b000: 
+            begin 
+               Load_instr = 1;
+               Data_Mem_Opcode = 2'b10;
+               RF_enable = 1;
+              //Check for invalid instructions
+              if( I[4] == 1 || (I[20] == 0 && I[24:23] == 2'b10) || (I[11:7] == 5'b00000 && (I[6:5] == 2'b00 || I[6:5] == 2'b11)) ) //Last OR(AND(OR) operation to filter invalid shifter operands(data processing instructions)
+                  begin
+                      invalid = 1;
+                  end
             end
-        endcase
-        //Check for invalid instructions
-        if(I[31:28] == 4'b1111)
-        	begin
-          		invalid = 1;
-        	end
-       if(invalid)
-         begin
-         // $display("invalid");
-           Data_Mem_Opcode = 2'b00;
-           alu_Op = 3'b000;
-           B_Instr = 0;
-           Shift_imm = 0;
-           Load_instr = 1;
-           RF_enable = 0;
-           ID_S=0;
-           Br_L_Instr = 1'b0;
-         end
-     end
-
+          3'b001: 
+            begin
+              Load_instr = 1;
+              Data_Mem_Opcode = 2'b10;
+              RF_enable = 1;
+              Shift_imm = 1;
+              //Check for invalid instructions
+              if( I[24:23] == 2'b10 && (I[21:20] == 2'b00 || I[21:20] == 2'b10) )
+                  begin
+                      invalid = 1;
+                  end
+            end
+          3'b010:            //no invalid instructions
+            begin
+              Load_instr= I[20];
+              ID_S = 0;
+              Shift_imm = 1;
+              alu_Op = 4'b0100;
+              if(Load_instr == 1) 
+                   RF_enable = 1;
+              if(I[22] == 0) //b==0
+                   Data_Mem_Opcode = 2'b10;
+              else 
+                   Data_Mem_Opcode = 2'b00;  
+            end
+          3'b011:
+            begin
+               ID_S = 0;
+               Load_instr= I[20];
+               alu_Op = 4'b0100;
+               Shift_imm = 1;
+              //Check for invalid instructions
+              if(I[4]==1)
+                  begin
+                      invalid=1;
+                  end
+              if(Load_instr == 1) 
+                  RF_enable = 1;
+              if(I[22] == 0) //b==0 
+                  Data_Mem_Opcode = 2'b10;
+              else 
+                  Data_Mem_Opcode = 2'b00;
+            end
+          3'b101:             //no invalid instructions
+            begin
+              Load_instr = 1;
+              ID_S = 0;
+              Br_L_Instr = I[24];
+              Data_Mem_Opcode = 2'b10;
+              if(I[24] == 0) 
+                    B_Instr = 1;
+              else 
+                begin
+                    B_Instr = 1;
+                    RF_enable = 1;
+                end
+            end
+          default:
+              //Check for invalid instructions that do not match any other format
+              begin
+                  invalid = 1;
+              end
+          endcase
+          //Check for invalid instructions
+          if(I[31:28] == 4'b1111)
+                  invalid = 1;
+         if(invalid)
+           begin
+           // $display("invalid");
+             Data_Mem_Opcode = 2'b00;
+             alu_Op = 3'b000;
+             B_Instr = 0;
+             Shift_imm = 0;
+             Load_instr = 1;
+             RF_enable = 0;
+             ID_S=0;
+             Br_L_Instr = 1'b0;
+           end
+       end
      end 
 endmodule
 
@@ -1212,10 +1190,10 @@ module Processing_Pipeline_Unit();
         mux_2x1_32b IF_mux(PCIN, cond_output, nextPC, TA);
         
     //IF/ID transition
-        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25,  DataOut, nextPC,1'b1, cond_output, Clk,reset); 
+        IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25,  DataOut, nextPC,IF_ID_LE, cond_output, Clk,reset); 
 
     //Instuction Decodification Stage
-        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, RF_In_Port, Clk, WB_load_instr, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
+        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, RF_In_Port, Clk, WB_RF_enable, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
         Four_SE four_SE(fourSEout, I23_0); //4xSE
         adder TA_Adder (TA, ID_NextPC,fourSEout);
         mux_4x1_32b Mux_Rm(ID_PORTm, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA); 
@@ -1292,21 +1270,22 @@ initial #200 $finish;
                    Clk, $time);*/
          
 //Official display 
-        $display("    PC    |                    R1                   |                     R2                  |                        R3               |Clk| Time "); 
-         $monitor("PC:%d   R1: %d   R2:%d   R3:%d    R15:%d   Clock:%d  Time:%0d",
-        currentPC, DataOut, ALU_in_2 ,EX_PORTm,EX_PORTn, Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q, Register_File.R15.Q,
-          Clk, $time);
+         /* $display("     PC      |            Address               |      R1     |      R2     |      R3    |      R5       |Clk| Time "); 
+          $monitor("%d   | %b | %d  | %d |  %d |   %d  | %d | %0d",
+        currentPC, MEM_ALU_Res, Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q, Register_File.R5.Q,
+                   Clk, $time);*/
           
 
           //OTHER
-         /*$display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
-          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |  %b |  %b | %0d | %d",
+         $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
+          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |  %b |  %b | %0d ",
             currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
             WB_load_instr, WB_RF_enable, WB_ALU_Res, cond_output,Bit_S,
-                   Clk, $time, WB_Rd );
-         /* $monitor("I:%b  ss:%b  exm:%b  im:%b   in:%b   ex:%b  port:%b  portb:%b  mem:%b  fw:%b  porta:%b  wb:%b  I3:%b  I19:%b   RF:%b",DataOut, SSEresult, EX_PORTm, ID_PORTm, ID_PORTn, EX_ALU_Res, PortWrite, PortB, MEM_data_fwd, ForwardB, PortA,WB_load_instr,I3_0,I19_16, RF_In_Port);*/
+                   Clk, $time, IF_ID_LE );
+         /*//OTHER 2
+         $monitor("I:%b  ss:%b  exm:%b  im:%b   in:%b   ex:%b  port:%b  portb:%b  mem:%b  fw:%b  porta:%b  wb:%b  I3:%b  I19:%b   RF:%b",DataOut, SSEresult, EX_PORTm, ID_PORTm, ID_PORTn, EX_ALU_Res, PortWrite, PortB, MEM_data_fwd, ForwardB, PortA,WB_load_instr,I3_0,I19_16, RF_In_Port);*/
            
           end 
 endmodule
