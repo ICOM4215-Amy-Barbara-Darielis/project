@@ -21,7 +21,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         alu_Op = 3'b0;
         B_Instr = 1'b0;
         Shift_imm = 1'b0;
-        Load_instr= 1'b0;
+        Load_instr= 1'b1;
         RF_enable= 1'b0;
         ID_S = 1'b0;
         Br_L_Instr = 1'b0;
@@ -39,6 +39,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
         case (I[27:25])
         3'b000: 
           begin 
+             Load_instr = 1;
             //Check for invalid instructions
             if( I[4] == 1 || (I[20] == 0 && I[24:23] == 2'b10) || (I[11:7] == 5'b00000 && (I[6:5] == 2'b00 || I[6:5] == 2'b11)) ) //Last OR(AND(OR) operation to filter invalid shifter operands(data processing instructions)
               	begin
@@ -46,10 +47,10 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                 end
             Data_Mem_Opcode = 2'b10;
             RF_enable = 1;
-       //$display("I:%b  br:%b",I, Br_L_Instr);
           end
         3'b001: 
           begin
+            Load_instr = 1;
             //Check for invalid instructions
             if( I[24:23] == 2'b10 && (I[21:20] == 2'b00 || I[21:20] == 2'b10) )
             	begin
@@ -58,7 +59,6 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
             Data_Mem_Opcode = 2'b10;
             RF_enable = 1;
             Shift_imm = 1;
-          //$display("I:%b  br:%b",I, Br_L_Instr);
           end
         3'b010:            //no invalid instructions
           begin
@@ -70,13 +70,11 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                      Data_Mem_Opcode = 2'b10;
                   else 
                      Data_Mem_Opcode = 2'b00;
-            //    $display("I:%b  br:%b",I, Br_L_Instr);
                 end
             else 
                 begin
                 alu_Op = 4'b0100;
                 RF_enable = 1;
-          // $display("I:%b  br:%b",I, Br_L_Instr);
                 if(I[22] == 0) //b==0
                      Data_Mem_Opcode = 2'b10;
                 else 
@@ -104,7 +102,6 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
               begin
                 alu_Op = 4'b0100;
                 RF_enable = 1;
-              //  $display("I:%b B:%b  RF:%b br:%b",I,B_Instr,RF_enable, Br_L_Instr);
                 if(I[22] == 0) //b==0 
                      Data_Mem_Opcode = 2'b10;
                   else 
@@ -113,21 +110,19 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
           end
         3'b101:             //no invalid instructions
           begin
+            Load_instr = 1;
             ID_S = 0;
             Br_L_Instr = I[24];
               if(I[24] == 0) 
               begin
                   Data_Mem_Opcode = 2'b10;
                   B_Instr = 1;
-                //$display("I:%b B:%b  RF:%b br:%b",I,B_Instr,RF_enable, Br_L_Instr);
               end 
             else 
               begin
                   Data_Mem_Opcode = 2'b10;
                   B_Instr = 1;
                   RF_enable = 1;
-                  Br_L_Instr = 1;
-               // $display("I:%b B:%b  RF:%b br:%b",I,B_Instr,RF_enable, Br_L_Instr);
               end
           end
         default:
@@ -154,7 +149,6 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
            Br_L_Instr = 1'b0;
          end
      end
-      //$display("%b", Shift_imm);
 
      end 
 endmodule
@@ -306,6 +300,32 @@ module CPSR(output reg oN,oZ,oC,oV,input iS,iN,iC,iZ,iV);
         V = iV;
       end
 endmodule
+
+/**
+module CPSRtest;
+    reg iS,iN,iC,iZ,iV;
+    wire oN,oZ,oC,oV;
+    CPSR test(oN,oZ,oC,oV,iS,iN,iC,iZ,iV);
+
+  initial #100 $finish;
+  
+  initial fork
+    iN = 1'b0; 
+    iZ = 1'b1;
+    iC = 1'b1; 
+    iV = 1'b0;
+    iS = 1'b0;
+    #1 iS = 1'b1;
+  join
+  initial begin
+    $display ("SR: N Z C V S  Nf Zf Cf Vf           Time:");
+    $monitor ("    %b %b %b %b %b  %b  %b  %b  %b  %d ", iN, iZ, iC, iV, iS, oN, oZ, oC, oV,  $time); 
+  
+  end
+
+//end of ALUtest
+endmodule
+**/
  
 /**********************************************************
  *                         ALU                            *
@@ -614,7 +634,7 @@ endmodule
 /**********************************************************
  *                   Shifter/Sign Extender                *
  **********************************************************/
-module shifterSignExtender(output reg [31:0] result, output reg OutCarry,  input[31:0] rm, input [11:0] num12, input[2:0] missingInst, input InCarry);
+module shifterSignExtender(output reg [31:0] result, output reg OutCarry, output reg S, input[31:0] rm, input [11:0] num12, input[2:0] missingInst, input InCarry);
 	//Since we are working with movement of stuff we need a temporary register
 	//to not loose vital information
 	reg [31:0] tempReg;
@@ -760,6 +780,7 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry,  input
                     result = rm;
                 end
 		endcase		
+    S = result[20];
 	//end of begin 1
 	end
 //shift by immediate (second //since we need to execute a block of codes, aka run more than one expression, we use begin-end
@@ -1051,8 +1072,8 @@ module IDEXRegister (output reg[31:0] EX_PORTm, EX_PORTn, EX_NextPC, output reg 
  
 endmodule
 
-module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, MEM_I15_12, output reg [1:0] MEM_Data_Mem_Opcode, output reg MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
-                      input [31:0] EX_PORTn, EX_ALU_Res, EX_NextPC, input [3:0] EX_I15_12, input [1:0] EX_Data_Mem_Opcode, input EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset); 
+module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, output reg [3:0] MEM_Cond_Codes, MEM_I15_12, output reg [1:0] MEM_Data_Mem_Opcode, output reg MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
+                      input [31:0] EX_PORTn, EX_ALU_Res, EX_NextPC, input [3:0] EX_Cond_Codes, input [3:0] EX_I15_12, input [1:0] EX_Data_Mem_Opcode, input EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset); 
   always @ (posedge Clk, posedge reset)
     begin
      if(reset)
@@ -1060,6 +1081,7 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, MEM_
              MEM_PORTn <= 32'b0;
        		 MEM_ALU_Res <= 32'b0;
              MEM_NextPC <= 32'b0;
+       		 MEM_Cond_Codes <= 4'b0;
        		 MEM_I15_12 = 4'b0;
        		 MEM_load_instr <= 1'b0;
        		 MEM_Data_Mem_Opcode <= 2'b0;
@@ -1070,6 +1092,7 @@ module EXMEMRegister (output reg[31:0] MEM_PORTn, MEM_ALU_Res,  MEM_NextPC, MEM_
       begin
         MEM_PORTn <= EX_PORTn;
         MEM_ALU_Res <= EX_ALU_Res;
+        MEM_Cond_Codes <= EX_Cond_Codes;
         MEM_I15_12 <= EX_I15_12;
         MEM_load_instr <=EX_load_instr;
         MEM_Data_Mem_Opcode <= EX_Data_Mem_Opcode;
@@ -1164,7 +1187,7 @@ module Processing_Pipeline_Unit();
     wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTn, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
-  wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, RF_In_Port;
+  wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_Rd, MEM_Rd, WB_Rd, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes, RF_In_Port;
     wire [2:0] I27_25, EX_I27_25;
     wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB;
     wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S, ID_Br_L_Instr, EX_Br_L_Instr, Br_L_asserted, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, Bit_S;
@@ -1205,16 +1228,14 @@ module Processing_Pipeline_Unit();
     //Execution stage
         mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, SSEresult, EX_PORTn); 
         ALU ALU(EX_ALU_Res, condN,condZ,condC,condV, EX_PORTm, ALU_in_2, EX_ALU_op, OutCarry); 
-        shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_PORTm, EX_I11_0, EX_I27_25, oC);
+        shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_S, EX_PORTm, EX_I11_0, EX_I27_25, oC);
     
     //EX/MEM transition
-  EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res, MEM_NextPC, MEM_Rd, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted,
-                                    EX_PORTn, EX_ALU_Res, EX_NextPC, EX_Rd, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset);
+  EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res, MEM_NextPC, MEM_Cond_Codes, MEM_Rd, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted, EX_PORTn, EX_ALU_Res, EX_NextPC, EX_Cond_Codes, EX_Rd, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, Clk,reset);
 
     //Memory stage
-  data_ram256x8 Data_Mem(Mem_Data, Enable, !MEM_load_instr, MEM_ALU_Res, MEM_PORTn, MEM_Data_Mem_Opcode); //Writes when MEM_load_instr==0.
+        data_ram256x8 Data_Mem(Mem_Data, Enable, !MEM_load_instr, MEM_ALU_Res, DataIn, MEM_Data_Mem_Opcode); //Writes when MEM_load_instr==0.
         mux_2x1_32b MEM_mux(MEM_data_fwd, MEM_load_instr, MEM_ALU_Res, Mem_Data);
-
 
     //MEM/WB transition
   MEMWBRegister MEM_WB_Register(WB_ALU_Res, WB_Data, WB_NextPC, WB_Rd,  WB_load_instr, WB_RF_enable, WB_Br_L_asserted, MEM_ALU_Res, Mem_Data, MEM_NextPC, MEM_Rd,  MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted, Clk,reset);
@@ -1235,6 +1256,16 @@ module Processing_Pipeline_Unit();
   end
   $fclose(fi);
 end  
+  initial begin
+  fi = $fopen("input_file.txt","r");
+  Address = 32'b00000000000000000000000000000000;	
+  while(!$feof(fi)) begin
+    code = $fscanf(fi,"%b", data);
+    Data_Mem.Mem[Address] = data;
+    Address = Address + 1;
+  end
+  $fclose(fi);
+end
 
 initial #200 $finish;
   initial begin
@@ -1249,33 +1280,33 @@ initial #200 $finish;
   end
 
         initial begin
-                // imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
-          //$display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
+               /* // imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
+          $display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
           
-         /* $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|  Clk| Time "); 
+          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|  Clk| Time "); 
           $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |   %b | %0d ",
             currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
             WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,
                    Clk, $time);*/
+         
+//Official display 
+        $display("    PC    |                    R1                   |                     R2                  |                        R3               |Clk| Time "); 
+         $monitor("PC:%d   R1: %d   R2:%d   R3:%d    R15:%d   Clock:%d  Time:%0d",
+        currentPC, DataOut, ALU_in_2 ,EX_PORTm,EX_PORTn, Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q, Register_File.R15.Q,
+          Clk, $time);
           
-/*Official display 
-         $display("    PC    |             I                  |           MEM_ALU_Res                   |                    R1                   |                     R2                  |                        R3               |                   R15             |Clk| Time "); 
-          $monitor("%d|%b|  %b       |  %b       |  %b       |  %b       |  %b | %d | %0d",
-            currentPC, DataOut, MEM_ALU_Res,Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q, Register_File.R15.Q,
-            Clk, $time);
-*/
-          //AMYS DISPLAYYYYY
-         $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
-          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |  %b |  %b | %0d |",
+
+          //OTHER
+         /*$display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
+          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |  %b |  %b | %0d | %d",
             currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
             EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
             MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
-            WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,Bit_S,
-                   Clk, $time, );
-        //$monitor("I:%b  Br:%b   S:%b",DataOut, ID_Br_L_Instr, ID_S);
+            WB_load_instr, WB_RF_enable, WB_ALU_Res, cond_output,Bit_S,
+                   Clk, $time, WB_Rd );
+         /* $monitor("I:%b  ss:%b  exm:%b  im:%b   in:%b   ex:%b  port:%b  portb:%b  mem:%b  fw:%b  porta:%b  wb:%b  I3:%b  I19:%b   RF:%b",DataOut, SSEresult, EX_PORTm, ID_PORTm, ID_PORTn, EX_ALU_Res, PortWrite, PortB, MEM_data_fwd, ForwardB, PortA,WB_load_instr,I3_0,I19_16, RF_In_Port);*/
            
           end 
-  
 endmodule
