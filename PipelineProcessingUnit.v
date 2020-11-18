@@ -167,8 +167,8 @@ endmodule
  *              Hazards/Forwarding Unit                  *
  **********************************************************/
 module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, output reg IF_ID_LE, PCLE, no_op_mux, 
-    input [3:0] ID_Rm, ID_Rn, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr);
-   always @ (ID_Rm, ID_Rn, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr)
+    input [3:0] ID_Rm, ID_Rn, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, ID_shift_imm);
+  always @ (*)
     begin
         //Initially no data hazard has been detected yet, standard register contents are passed in ID stage
         ForwardA <= 2'b11; 
@@ -179,7 +179,7 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, output reg IF_ID_
       if(WB_RF_enable)
             begin
                 if(ID_Rm == WB_Rd) ForwardA <= 2'b00; //First connection of mux A is WB_Rd
-                if (ID_Rn == WB_Rd) ForwardB <= 2'b11; //Fourth connection of mux B is WB_Rd
+              if (ID_Rn == WB_Rd) ForwardB <= 2'b11; //Fourth connection of mux B is WB_Rd
             end
             
         //MEM Forwarding
@@ -203,7 +203,7 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, output reg IF_ID_
         
         //Data hazard by load instruction, controlling CU mux
         // no_op_mux = 0 means control unit signals are sent instead of no op
-        if(EX_load_instr && ID_Rm == EX_Rd) 
+      if(EX_load_instr && ID_Rm == EX_Rd && !ID_shift_imm) 
             begin
                 PCLE <= 0; 
                 IF_ID_LE <= 0; 
@@ -1191,7 +1191,7 @@ module Processing_Pipeline_Unit();
   ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, Bit_S, data_enable, ID_Br_L_Instr, I31_0,reset);
   
   mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, EX_Br_L_Instr,ID_S, ID_data_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, ID_Br_L_Instr, Bit_S, data_enable, 1'b0, 4'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);   
-  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr); 
+  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, ID_shift_imm); 
   conditionhandler Condition_Handler(cond_output, Br_L_asserted, oN,oZ,oC,oV, ID_B_instr, ID_Br_L_Instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
 
