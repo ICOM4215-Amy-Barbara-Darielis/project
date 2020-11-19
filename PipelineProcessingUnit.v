@@ -66,6 +66,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
               ID_S = 0;
               Shift_imm = 1;
               alu_Op = 4'b0100;
+              data_enable= 1;
               Load_instr = I[20];
               if(Load_instr == 1) 
                    RF_enable = 1;
@@ -80,6 +81,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                Load_instr= I[20];
                alu_Op = 4'b0100;
                Shift_imm = 1;
+               data_enable= 1;
               //Check for invalid instructions
               if(I[4]==1)
                   begin
@@ -1189,7 +1191,7 @@ module Processing_Pipeline_Unit();
 
     //Embedded modules
     
-  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, Bit_S, data_enable, Br_L_Instr, I31_0,reset);
+  ControlUnit Control_Unit(Data_Mem_Opcode, ALU_op, ID_B_instr, shift_imm, load_instr, RF_enable, Bit_S, Br_L_Instr, data_enable, I31_0, reset);
   
   mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, ID_Br_L_Instr,ID_S, ID_data_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, Br_L_Instr, Bit_S, data_enable, 1'b0, 4'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);   
   Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, ID_shift_imm); 
@@ -1254,6 +1256,7 @@ end
   while(!$feof(fi)) begin
     code = $fscanf(fi,"%b", data);
     Data_Mem.Mem[Address] = data;
+   // $display("IR: Address = %d, DataOut = %b", Address, Data_Mem.Mem[Address]);
     Address = Address + 1;
   end
   $fclose(fi);
@@ -1304,7 +1307,7 @@ initial #200 $finish;
           /*$monitor("PC: %d| I: %b| I31_0: %b|  ForwardA: %b | ForwardB: %b | IF_ID_LE: %b | PCLE: %b | no_op_mux: %b | ID_Rm: %b | ID_Rn: %b | ID_Rd: %b | EX_Rd: %b | MEM_Rd: %b | WB_Rd: %b | EX_RF_enable: %b | WB_RF_enable: %b | MEM_RF_enable: %b| EX_load_instr: %b | Clk: %b | %d ",
             currentPC, DataOut, I31_0, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, MEM_RF_enable, WB_RF_enable,  EX_load_instr, Clk, $time);*/
    
-          $monitor("| I: %b| I31_0: %b| PortW: %b | PortA: %b | I19_16: %b | Enable:%b | EnableID:%b | EnableEX:%b | EnableMEM:%b | EnableWB:%b |RF_In_Port: %b|   %d | %d			|",
-                   DataOut, I31_0, PortWrite, PortA, I19_16, RF_enable, ID_RF_enable, EX_RF_enable, MEM_RF_enable, WB_RF_enable, RF_In_Port, $time, currentPC);           
+          $monitor("PC %d| I: %b| I31_0: %b| r0:%b | r1: %b | r2: %b | r3: %b | r5:%b |memdata:%b | mamalu:%b  | exalu:%b | %d", currentPC,
+                   DataOut, I31_0, Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q ,Mem_Data, MEM_ALU_Res, EX_ALU_Res, $time);           
         end 
 endmodule
