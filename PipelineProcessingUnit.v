@@ -1219,7 +1219,7 @@ module Processing_Pipeline_Unit();
   IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_NextPC, EX_I11_0, EX_Rd, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, EX_data_enable, ID_PORTm, ID_PORTn, ID_NextPC, I11_0, I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Br_L_asserted, ID_data_enable, Clk, reset);
 
     //Execution stage
-        mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, SSEresult, EX_PORTn); 
+  mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, EX_PORTn, SSEresult); 
         ALU ALU(EX_ALU_Res, condN,condZ,condC,condV, EX_PORTm, ALU_in_2, EX_ALU_op, OutCarry); 
         shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_S, EX_PORTm, EX_I11_0, EX_I27_25, oC);
     
@@ -1307,7 +1307,7 @@ initial #200 $finish;
           /*$monitor("PC: %d| I: %b| I31_0: %b|  ForwardA: %b | ForwardB: %b | IF_ID_LE: %b | PCLE: %b | no_op_mux: %b | ID_Rm: %b | ID_Rn: %b | ID_Rd: %b | EX_Rd: %b | MEM_Rd: %b | WB_Rd: %b | EX_RF_enable: %b | WB_RF_enable: %b | MEM_RF_enable: %b| EX_load_instr: %b | Clk: %b | %d ",
             currentPC, DataOut, I31_0, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, MEM_RF_enable, WB_RF_enable,  EX_load_instr, Clk, $time);*/
    
-          $monitor("PC %d| I: %b| I31_0: %b| r0:%b | r1: %b | r2: %b | r3: %b | r5:%b |memdata:%b | mamalu:%b  | exalu:%b | %d", currentPC,
-                   DataOut, I31_0, Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q ,Mem_Data, MEM_ALU_Res, EX_ALU_Res, $time);           
-        end 
+          $monitor("PC %d| I: %b| I31_0: %b| r0:%b | r1: %b | r2: %b | r3: %b | r5:%b |memdata:%b | exalu:%b  | wbalu:%b load_instr:%b |ID_load_instr:%b |Ex_load_instr:%b |MEM_load_instr:%b ||WB_load_instr:%b | WB_Br_L_asserted:%b  %d", currentPC,
+                   DataOut, I31_0, Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q ,Mem_Data, EX_ALU_Res, WB_ALU_Res,load_instr,ID_load_instr,EX_load_instr,MEM_load_instr,WB_load_instr, WB_Br_L_asserted, $time);           
+        end
 endmodule
