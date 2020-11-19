@@ -1298,9 +1298,10 @@ initial #200 $finish;
                    Clk, $time, IF_ID_LE );*/
           //TESTING
                   
-          $monitor("PC: %d| I: %b| I31_0: %b|  ForwardA: %b | ForwardB: %b | IF_ID_LE: %b | PCLE: %b | no_op_mux: %b | ID_Rm: %b | ID_Rn: %b | ID_Rd: %b | EX_Rd: %b | MEM_Rd: %b | WB_Rd: %b | EX_RF_enable: %b | WB_RF_enable: %b | MEM_RF_enable: %b| EX_load_instr: %b | Clk: %b | %d ",
-            currentPC, DataOut, I31_0, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, MEM_RF_enable, WB_RF_enable,  EX_load_instr, Clk, $time);
+          /*$monitor("PC: %d| I: %b| I31_0: %b|  ForwardA: %b | ForwardB: %b | IF_ID_LE: %b | PCLE: %b | no_op_mux: %b | ID_Rm: %b | ID_Rn: %b | ID_Rd: %b | EX_Rd: %b | MEM_Rd: %b | WB_Rd: %b | EX_RF_enable: %b | WB_RF_enable: %b | MEM_RF_enable: %b| EX_load_instr: %b | Clk: %b | %d ",
+            currentPC, DataOut, I31_0, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, MEM_RF_enable, WB_RF_enable,  EX_load_instr, Clk, $time);*/
 
-           
+          $monitor("PC: %d| I: %b| I31_0: %b|  shift_imm: %b | ID_shift_imm: %b | EX_shift_imm: %b | Clk: %b | %d ",
+            currentPC, DataOut, I31_0, shift_imm, ID_shift_imm, EX_shift_imm, Clk, $time);
           end 
 endmodule
