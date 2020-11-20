@@ -1,4 +1,3 @@
-
 // Course: ICOM4215
 // Project Name: Processing Pipeline Unit
 // Contributors:
@@ -173,49 +172,49 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, output reg IF_ID_
   always @ (*)
     begin
         //Initially no data hazard has been detected yet, standard register contents are passed in ID stage
-        ForwardA <= 2'b11; 
-        ForwardB <= 2'b00;
+        ForwardA = 2'b11; 
+        ForwardB = 2'b00;
       
         //Will choose nearest stage to ID when Data hazard occurs
         //WB Forwarding
       if(WB_RF_enable)
             begin
-                if(ID_Rm == WB_Rd) ForwardA <= 2'b00; //First connection of mux A is WB_Rd
-              if (ID_Rn == WB_Rd) ForwardB <= 2'b11; //Fourth connection of mux B is WB_Rd
+              if(ID_Rn == WB_Rd) ForwardA = 2'b00; //First connection of mux A is WB_Rd
+              if (ID_Rm == WB_Rd) ForwardB = 2'b11; //Fourth connection of mux B is WB_Rd
             end
             
         //MEM Forwarding
         if(MEM_RF_enable)
             begin
-                if(ID_Rm == MEM_Rd) ForwardA <= 2'b01; //Second connection of mux A is MEM_Rd
-                if (ID_Rn == MEM_Rd) ForwardB <= 2'b10 ; //Third connection of mux B is MEM_Rd
+              if(ID_Rn == MEM_Rd) ForwardA = 2'b01; //Second connection of mux A is MEM_Rd
+              if (ID_Rm == MEM_Rd) ForwardB = 2'b10 ; //Third connection of mux B is MEM_Rd
             end
             
         //EX Forwarding
        if(EX_RF_enable) 
            begin
-                if(ID_Rm == EX_Rd) ForwardA <= 2'b10; //Third connection of mux B is Ex_Rd
-                if (ID_Rn == EX_Rd) ForwardB <= 2'b01; //Second connection of mux B is Ex_Rd
+             if(ID_Rn == EX_Rd) ForwardA = 2'b10; //Third connection of mux B is Ex_Rd
+             if (ID_Rm == EX_Rd) ForwardB = 2'b01; //Second connection of mux B is Ex_Rd
             end
 
         //Initially, no data hazard by load instruction, sends control to CU mux
-        PCLE <= 1; 
-        IF_ID_LE <= 1; 
-        no_op_mux <= 0; 
+        PCLE = 1; 
+        IF_ID_LE = 1; 
+        no_op_mux = 0; 
         
         //Data hazard by load instruction, controlling CU mux
         // no_op_mux = 0 means control unit signals are sent instead of no op
-      if(EX_load_instr && ID_Rm == EX_Rd) 
+      if(EX_load_instr && ID_Rm == EX_Rd && !ID_shift_imm) 
             begin
-                PCLE <= 0; 
-                IF_ID_LE <= 0; 
-                no_op_mux <= 1; 
+                PCLE = 0; 
+                IF_ID_LE = 0; 
+                no_op_mux = 1; 
             end
-      if(EX_load_instr && ID_Rn == EX_Rd && !ID_shift_imm) 
+      if(EX_load_instr && ID_Rn == EX_Rd) 
             begin
-                PCLE <= 0; 
-                IF_ID_LE <= 0; 
-                no_op_mux <= 1; 
+                PCLE = 0; 
+                IF_ID_LE = 0; 
+                no_op_mux = 1; 
             end
     end
 endmodule  
@@ -935,19 +934,22 @@ reg[7:0] Mem[0:255];
       end
 endmodule
 
+ /********************
+ *    4X SE          *
+ ********************/
+module Four_SE(output reg [31:0] result, input[23:0] in);
+
+always @ (in)
+        begin
+            result[31:24] = 8'b00000000;
+            result[23:0] = in;
+            result = result <<< 2;
+        end
+endmodule
+
 /**********************************************************
  *              PIPELINE PROCESSING UNIT                  *
  **********************************************************/
- 
- //          x4(SE) (Shift extends and Multiplies by 4)
-module Four_SE (output reg [31:0] out, input [23:0] in);
-    reg [23:0] inSE;
-    always @ (*)
-        begin
-            inSE = in;
-            out = inSE*32'd4;
-        end
-endmodule
 
 //                 PIPELINE REGISTERS
 module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0, output reg [11:0] I11_0, output reg [3:0] I3_0, I19_16, I15_12, I31_28, output reg [2:0] I27_25,
@@ -957,40 +959,40 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
     */
   always @ (posedge Clk, posedge reset)
     begin
-    if(reset)
-      begin
-       			I31_0 <= 32'b0;
-        		ID_NextPC <= 32'b0;
-        		I23_0 <= 24'b0;
-        		I11_0 <= 12'b0;
-        		I3_0 <= 4'b0;
-        		I19_16 <= 4'b0;
-        		I15_12 <= 4'b0;
-        		I31_28 <= 4'b0;
-        		I27_25 <= 3'b0; 
-      end
-    else
-      begin
-        if (IF_ID_LE) 
-            begin
-                ID_NextPC <= IF_NextPC;
-                if(IF_flush) 
-                  begin
-                    I31_0 <= 32'b0; 
-                  end
-                else 
-                  begin
-                    I31_0 <= I;
-                  end
-                I27_25 <= I31_0[27:25];
-                I23_0 <= I31_0[23:0];
-                I11_0 <= I31_0[11:0];
-                I3_0 <= I31_0[3:0];
-                I19_16 <= I31_0[19:16];
-                I15_12 <= I31_0[15:12];
-                I31_28 <= I31_0[31:28];
-            end
-      end
+      if(reset)
+        begin
+                  I31_0 <= 32'b0;
+                  ID_NextPC <= 32'b0;
+                  I23_0 <= 24'b0;
+                  I11_0 <= 12'b0;
+                  I3_0 <= 4'b0;
+                  I19_16 <= 4'b0;
+                  I15_12 <= 4'b0;
+                  I31_28 <= 4'b0;
+                  I27_25 <= 3'b0; 
+        end
+      else
+        begin
+          if (IF_ID_LE) 
+              begin
+                  ID_NextPC <= IF_NextPC;
+                  if(IF_flush) 
+                    begin
+                      I31_0 = 32'b0; 
+                    end
+                  else 
+                    begin
+                      I31_0 = I;
+                    end
+                  I27_25 <= I31_0[27:25];
+                  I23_0 <= I31_0[23:0];
+                  I11_0 <= I31_0[11:0];
+                  I3_0 <= I31_0[3:0];
+                  I19_16 <= I31_0[19:16];
+                  I15_12 <= I31_0[15:12];
+                  I31_28 <= I31_0[31:28];
+              end
+        end
     end
 endmodule
 
@@ -1150,7 +1152,7 @@ module Processing_Pipeline_Unit();
     wire [31:0] DataOut, I31_0;
     wire [31:0] PortC; //????
   wire [31:0] nextPC, currentPC, PCIN, ID_NextPC, EX_NextPC, MEM_NextPC, WB_NextPC, fourSEout, TA;
-    wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTn, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
+    wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTm, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data;
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
   wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_I15_12, MEM_I15_12, WB_I15_12, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes, RF_In_Port;
@@ -1176,31 +1178,31 @@ module Processing_Pipeline_Unit();
   ram256x8 Instruction_Mem(DataOut, Enable, currentPC, DataIn); //Data in belongs to precharge. 
         adder PC_Adder (nextPC, currentPC, 32'd4);
         mux_2x1_32b IF_mux(PCIN, cond_output, nextPC, TA);
-        
+         
     //IF/ID transition
         IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25,  DataOut, nextPC,IF_ID_LE, cond_output, Clk,reset); 
 
     //Instuction Decodification Stage
         register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, C, RF_In_Port, Clk, WB_RF_enable, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
         Four_SE four_SE(fourSEout, I23_0); //4xSE
-        adder TA_Adder (TA, ID_NextPC,fourSEout);
-        mux_4x1_32b Mux_Rm(ID_PORTm, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA); 
-        mux_4x1_32b Mux_Rn(ID_PORTn, ForwardB, PortB, EX_ALU_Res, MEM_data_fwd, PortWrite);
+  adder TA_Adder (TA, ID_NextPC,fourSEout);
+  mux_4x1_32b Mux_Rn(ID_PORTn, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA); 
+  mux_4x1_32b Mux_Rm(ID_PORTm, ForwardB, PortB, EX_ALU_Res, MEM_data_fwd, PortWrite);
     
     //ID/EX transition
         //I15_12 =  Rd
   IDEXRegister IDEX_Register(EX_PORTm, EX_PORTn, EX_NextPC, EX_I11_0, EX_I15_12, EX_ALU_op, EX_I27_25, EX_Data_Mem_Opcode, EX_S, EX_shift_imm, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, EX_data_enable, ID_PORTm, ID_PORTn, ID_NextPC, I11_0, I15_12, ID_ALU_op, I27_25, Data_Mem_Opcode, ID_S, ID_shift_imm, ID_load_instr, ID_RF_enable, Br_L_asserted, ID_data_enable, Clk, reset);
 
     //Execution stage
-  mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, EX_PORTn, SSEresult); 
-        ALU ALU(EX_ALU_Res, condN,condZ,condC,condV, EX_PORTm, ALU_in_2, EX_ALU_op, OutCarry); 
+  mux_2x1_32b EX_mux(ALU_in_2, EX_shift_imm, EX_PORTm, SSEresult); 
+  ALU ALU(EX_ALU_Res, condN,condZ,condC,condV, EX_PORTn, ALU_in_2, EX_ALU_op, OutCarry); 
         shifterSignExtender ShifterSign_Extender(SSEresult, OutCarry, EX_PORTm, EX_I11_0, EX_I27_25, oC);
     
     //EX/MEM transition
-  EXMEMRegister EXMEM_Register(MEM_PORTn, MEM_ALU_Res, MEM_NextPC, MEM_Cond_Codes, MEM_I15_12, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted, MEM_data_enable, EX_PORTn, EX_ALU_Res, EX_NextPC, EX_Cond_Codes, EX_I15_12, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, EX_data_enable, Clk,reset);
+  EXMEMRegister EXMEM_Register(MEM_PORTm, MEM_ALU_Res, MEM_NextPC, MEM_Cond_Codes, MEM_I15_12, MEM_Data_Mem_Opcode, MEM_load_instr, MEM_RF_enable, MEM_Br_L_asserted, MEM_data_enable, EX_PORTm, EX_ALU_Res, EX_NextPC, EX_Cond_Codes, EX_I15_12, EX_Data_Mem_Opcode, EX_load_instr, EX_RF_enable, EX_Br_L_asserted, EX_data_enable, Clk,reset);
 
     //Memory stage
-  data_ram256x8 Data_Mem(Mem_Data, MEM_data_enable, !MEM_load_instr, MEM_ALU_Res, MEM_PORTn, MEM_Data_Mem_Opcode); 			//Writes when MEM_load_instr==0 && MEM_data_enable==1.
+  data_ram256x8 Data_Mem(Mem_Data, MEM_data_enable, !MEM_load_instr, MEM_ALU_Res, MEM_PORTm, MEM_Data_Mem_Opcode); 			//Writes when MEM_load_instr==0 && MEM_data_enable==1.
   mux_2x1_32b MEM_mux(MEM_data_fwd, MEM_load_instr, MEM_ALU_Res, Mem_Data);
 
     //MEM/WB transition
@@ -1236,7 +1238,7 @@ end
    Address = #1 32'b00000000000000000000000000000000;
 end
 
-initial #125 $finish;
+initial #200 $finish;
   initial begin
     Clk = 0;
     forever #5 Clk = !Clk;
@@ -1249,45 +1251,15 @@ initial #125 $finish;
   end
 
         initial begin
-               /* // imprimir PC (en decimal) y las señales de control en las etapas ID, EX, MEM y WB (en binario).
-          $display("\nProgram C.                                           ID Control Signals                                                                                               EX Control Signals                                                  MEM Control Signals                    WB Control Signals");
-          
-          $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|  Clk| Time "); 
-          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |   %b | %0d ",
-            currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
-            EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
-            MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
-            WB_load_instr, WB_RF_enable, MEM_ALU_Res, cond_output,
-                   Clk, $time);*/
-         
-//Official display 
-         /* $display("     PC      |            Address               |      R1     |      R2     |      R3    |      R5       |Clk| Time "); 
-          $monitor("%d   | %b | %d  | %d |  %d |   %d  | %d | %0d",
-        currentPC, MEM_ALU_Res, Register_File.R1.Q,Register_File.R2.Q,Register_File.R3.Q, Register_File.R5.Q,
-                   Clk, $time);*/
-          
-
-          //OTHER
-        /*$display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ForwardA|ForwardB|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|cond_output|EX_Data_Mem_Opcode|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  |cond_output|BITS|  Clk| Time  | R14"); 
-          $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    |  %b    |  %b    |  %b   |    %b       |      %b      |      %b     |   %b       |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |     %b     |  %b |  %b | %0d ",
-            currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ForwardA, ForwardB,
-            EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, cond_output, EX_Data_Mem_Opcode,
-            MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode,
-            WB_load_instr, WB_RF_enable, WB_ALU_Res, cond_output,Bit_S,
-                   Clk, $time, IF_ID_LE );*/
-          //TESTING
-                  
-          /*$monitor("PC: %d| I: %b| I31_0: %b|  ForwardA: %b | ForwardB: %b | IF_ID_LE: %b | PCLE: %b | no_op_mux: %b | ID_Rm: %b | ID_Rn: %b | ID_Rd: %b | EX_Rd: %b | MEM_Rd: %b | WB_Rd: %b | EX_RF_enable: %b | WB_RF_enable: %b | MEM_RF_enable: %b| EX_load_instr: %b | Clk: %b | %d ",
-            currentPC, DataOut, I31_0, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_Rd, MEM_Rd, WB_Rd, EX_RF_enable, MEM_RF_enable, WB_RF_enable,  EX_load_instr, Clk, $time);*/
-   
-          $monitor("PC %d| Data Mem Address: %b| r1: %d | r2: %d | r3: %d | r5:%d |  %d", currentPC, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time);           
-        end
-  integer j = 0;
-  initial #120
-            begin
-              for( j = 0; j < 60; j = j + 4)
-              begin
-                $display("Data en %d: %b %b %b %b", j, Data_Mem.Mem[j], Data_Mem.Mem[j + 1], Data_Mem.Mem[j + 2], Data_Mem.Mem[j + 3]);
-              end
+          ///TESTING
+          $monitor("PC %d| I:%b | Data Mem Address: %b| r1: %2d | r2: %2d | r3: %2d | r5:%2d |  time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time);          
           end
+  //integer j = 0;
+  /*initial #95
+            begin
+              for( j = 0; j < 48; j = j + 4)
+              begin
+                $display("Data en %d: %b %b %b %b   %d", j, Data_Mem.Mem[j], Data_Mem.Mem[j + 1], Data_Mem.Mem[j + 2], Data_Mem.Mem[j + 3], $time);
+              end
+          end*/
 endmodule
