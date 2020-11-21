@@ -937,15 +937,21 @@ endmodule
  /********************
  *    4X SE          *
  ********************/
-module Four_SE(output reg [31:0] result, input[23:0] in);
-
-always @ (in)
+module Four_SE(output reg signed [31:0] result, input[23:0] in);
+  always @ (*)
         begin
-            result[31:24] = 8'b00000000;
-            result[23:0] = in;
-            result = result <<< 2;
+         // $display("in: %d ",in);
+          
+        if (in[23]) result = {{8{1'b1}}, in};
+   		else
+        	begin
+             result = {{8{1'b0}}, in};
+        	end
+           result = result <<< 2;
+         // $display("result: %d",result);
         end
 endmodule
+
 
 /**********************************************************
  *              PIPELINE PROCESSING UNIT                  *
@@ -1238,7 +1244,7 @@ end
    Address = #1 32'b00000000000000000000000000000000;
 end
 
-initial #200 $finish;
+initial #400 $finish;
   initial begin
     Clk = 0;
     forever #5 Clk = !Clk;
