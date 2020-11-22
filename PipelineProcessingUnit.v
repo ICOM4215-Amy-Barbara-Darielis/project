@@ -44,9 +44,9 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                Data_Mem_Opcode = 2'b10;
                RF_enable = 1;
               //Check for invalid instructions
-              if( I[4] == 1 || (I[20] == 0 && I[24:23] == 2'b10) || (I[11:7] == 5'b00000 && (I[6:5] == 2'b00 || I[6:5] == 2'b11)) ) //Last OR(AND(OR) operation to filter invalid shifter operands(data processing instructions)
+              if( I[4] == 1 || (I[20] == 0 && I[24:23] == 2'b10) ) //Last OR(AND(OR) operation to filter invalid shifter operands(data processing instructions)
                   begin
-                      invalid = 1;
+                     invalid = 1;
                   end
             end
           3'b001: 
@@ -1258,7 +1258,7 @@ initial #400 $finish;
 
         initial begin
           ///TESTING
-          $monitor("PC %d| I:%b | Data Mem Address: %b| r1: %2d | r2: %2d | r3: %2d | r5:%2d |  time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time);          
+          $monitor("PC %d| I:%b | Data Mem Address: %d| r1: %2d | r2: %2d | r3: %2d | r5:%2d |  time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time);          
           end
   //integer j = 0;
   /*initial #95
