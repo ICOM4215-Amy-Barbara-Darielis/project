@@ -1220,12 +1220,20 @@ module Processing_Pipeline_Unit();
    
   //PRECHARGE
   initial begin
+    reg [31:0] macarena =32'b00000000000000000000000000000000;
+    
+    for(macarena=0; macarena<168; macarena++)
+      begin
+        Instruction_Mem.Mem[macarena] = 8'b00000000;
+       // $display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[macarena]);  
+      end
+    
   fi = $fopen("input_file.txt","r");
   Address =  32'b00000000000000000000000000000000;
   while(!$feof(fi)) begin
     code = $fscanf(fi,"%b", data);
     Instruction_Mem.Mem[Address] = data; 
-   //$display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[Address]);  
+  // $display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[Address]);  
     Address = Address + 1;
   end
   $fclose(fi);
@@ -1268,4 +1276,12 @@ initial #400 $finish;
                 $display("Data en %d: %b %b %b %b   %d", j, Data_Mem.Mem[j], Data_Mem.Mem[j + 1], Data_Mem.Mem[j + 2], Data_Mem.Mem[j + 3], $time);
               end
           end*/
+  
+   /*initial #1
+            begin
+              for( j = 0; j < 100; j = j + 4)
+              begin
+                $display("Data en %d: %b %b %b %b   %d", j, Instruction_Mem.Mem[j], Instruction_Mem.Mem[j + 1], Instruction_Mem.Mem[j + 2], Instruction_Mem.Mem[j + 3], $time);
+              end*/
+          
 endmodule
