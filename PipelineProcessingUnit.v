@@ -1265,8 +1265,14 @@ initial #400 $finish;
    
   end
 
+  //OFICIAL DISPLAY
   initial begin
-    $monitor("PC %5d| I:%b | Data Mem Address: %b| r1: %2d | r2: %2d | r3: %2d | r5:%2d |  time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time);          
+      //CONTROL SIGNAL DISPLAY
+  $display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ID_S|Br_L_Instr|data_enable|ForwardA|ForwardB|IF_ID_LE|PCLE|no_op_mux|cond_output|ID_Br_L_asserted|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|EX_Data_Mem_Opcode|EX_S|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|WB_load_instr|WB_RF_enable|          MEM_ALU_Res                  | Clk| Time  "); 
+    $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    | %b  |     %b    |   %b       |  %b    |   %b    |  %b    |   %b    |  %b |    %b    |     %b     |     l %b        |  %b   |    %b       |      %b      |      %b     |         %b       |       %b      |     %b       |       %b          |      %b      |      %b     |  %b     |  %b | %0d ",
+            currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ID_S, Br_L_Instr, data_enable, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, cond_output, Br_L_asserted, EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, EX_Data_Mem_Opcode, EX_S, MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode, WB_load_instr, WB_RF_enable, WB_ALU_Res,
+                   Clk, $time );
+   /* $monitor("PC %5d| I:%b | Data Mem Address: %b| r1: %2d | r2: %2d | r3: %2d | r5:%2d |  time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time); */         
    end
   
   integer j = 0;
