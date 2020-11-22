@@ -1220,32 +1220,33 @@ module Processing_Pipeline_Unit();
    
   //PRECHARGE
   initial begin
-    reg [31:0] macarena =32'b00000000000000000000000000000000;
     
+    reg [31:0] macarena =32'd0;
 	  for(macarena=0; macarena<256; macarena++)
       begin
-        Instruction_Mem.Mem[macarena] = 8'b00000000;
-       // $display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[macarena]);  
+        Instruction_Mem.Mem[macarena] = 8'b00000000;  
       end
     
   fi = $fopen("input_file.txt","r");
   Address =  32'b00000000000000000000000000000000;
   while(!$feof(fi)) begin
     code = $fscanf(fi,"%b", data);
-    Instruction_Mem.Mem[Address] = data; 
-  // $display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[Address]);  
+    Instruction_Mem.Mem[Address] = data;   
     Address = Address + 1;
   end
   $fclose(fi);
-  Address = #1 32'b00000000000000000000000000000000;
-end  
-  initial begin
+  
+    for(macarena=0; macarena<256; macarena++)
+      begin
+        Data_Mem.Mem[macarena] = 8'b00000000;  
+      end
+    
+    Address = #1 32'b00000000000000000000000000000000;
   fi = $fopen("input_file.txt","r");
   Address =  32'b00000000000000000000000000000000;	
   while(!$feof(fi)) begin
     code = $fscanf(fi,"%b", data);
     Data_Mem.Mem[Address] = data;
-   // $display("IR: Address = %d, DataOut = %b", Address, Data_Mem.Mem[Address]);
     Address = Address + 1;
   end
   $fclose(fi);
@@ -1264,24 +1265,17 @@ initial #400 $finish;
    
   end
 
-        initial begin
-          ///TESTING
-          $monitor("PC %d| I:%b | Data Mem Address: %d| r1: %2d | r2: %2d | r3: %2d | r5:%2d |  time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time);          
-          end
-  //integer j = 0;
-  /*initial #95
-            begin
-              for( j = 0; j < 48; j = j + 4)
-              begin
-                $display("Data en %d: %b %b %b %b   %d", j, Data_Mem.Mem[j], Data_Mem.Mem[j + 1], Data_Mem.Mem[j + 2], Data_Mem.Mem[j + 3], $time);
-              end
-          end*/
+  initial begin
+    $monitor("PC %5d| I:%b | Data Mem Address: %b| r1: %2d | r2: %2d | r3: %2d | r5:%2d |  time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time);          
+   end
   
-   /*initial #1
-            begin
-              for( j = 0; j < 100; j = j + 4)
-              begin
-                $display("Data en %d: %b %b %b %b   %d", j, Instruction_Mem.Mem[j], Instruction_Mem.Mem[j + 1], Instruction_Mem.Mem[j + 2], Instruction_Mem.Mem[j + 3], $time);
-              end*/
-          
+  integer j = 0;
+  initial #399
+    begin
+      $display("\nData Memory Content");
+      for( j = 0; j < 64; j = j + 4)
+          begin
+            $display("%3d: %b %b %b %b", j, Data_Mem.Mem[j], Data_Mem.Mem[j + 1], Data_Mem.Mem[j + 2], Data_Mem.Mem[j + 3]);
+          end
+     end
 endmodule
