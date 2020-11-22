@@ -1222,7 +1222,7 @@ module Processing_Pipeline_Unit();
   initial begin
     reg [31:0] macarena =32'b00000000000000000000000000000000;
     
-    for(macarena=0; macarena<168; macarena++)
+	  for(macarena=0; macarena<256; macarena++)
       begin
         Instruction_Mem.Mem[macarena] = 8'b00000000;
        // $display("IR: Address = %d, DataOut = %b", Address, Instruction_Mem.Mem[macarena]);  
