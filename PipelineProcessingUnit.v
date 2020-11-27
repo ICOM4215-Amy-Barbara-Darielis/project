@@ -182,6 +182,7 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, ForwardC, output 
             begin
               if(ID_Rn == WB_Rd) ForwardA = 2'b00; //First connection of mux A is WB_Rd
               if (ID_Rm == WB_Rd) ForwardB = 2'b11; //Fourth connection of mux B is WB_Rd
+              if(ID_Rd == WB_Rd) ForwardC = 2'b11; // Fourth connection of mux C is [MEM_Rd]
             end
             
         //MEM Forwarding
@@ -1210,7 +1211,7 @@ module Processing_Pipeline_Unit();
   adder TA_Adder (TA, ID_NextPC,fourSEout);
   mux_4x1_32b Mux_Rn(ID_PORTn, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA); 
   mux_4x1_32b Mux_Rm(ID_PORTm, ForwardB, PortB, EX_ALU_Res, MEM_data_fwd, PortWrite);
-  mux_3x1_32b Mux_Rd(ID_PORTd, ForwardC[0], ForwardC[1], PortC, MEM_PORTd, EX_PORTd);
+  mux_4x1_32b Mux_Rd(ID_PORTd, ForwardC, PortC, EX_PORTd, MEM_PORTd, PortWrite);
   //DELETE LATER
   //mux_4x1_32b Mux_Rd(ID_Rd, ForwardC, PortC, PortC, PortC, PortC);
   // WB_Content_mux(PortWrite, WB_load_instr, WB_Br_L_asserted, WB_ALU_Res, WB_Data, WB_NextPC);
@@ -1295,7 +1296,7 @@ initial #399 $finish;
             */
      
    //OFICIAL DISPLAY 
-    $monitor("PC %5d| I:%b | Data Mem Address: %d| r0: %2d | r1: %2d | r2: %2d | r3: %2d | r5:%2d | Rd: %d | ID_Port_d: %d | FwdC: %b |  EX_Port_d: %d | MEM_Port_d: %d | time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, I15_12, ID_PORTd, ForwardC, EX_PORTd, MEM_PORTd, $time); 
+    $monitor("PC %5d| I:%b | Data Mem Address: %d| r0: %2d | r1: %2d | r2: %2d | r3: %2d | r5:%2d | time: %2d", currentPC, DataOut, MEM_ALU_Res, Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R5.Q, $time); 
            
    end
   
