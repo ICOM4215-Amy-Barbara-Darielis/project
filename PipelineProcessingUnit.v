@@ -167,8 +167,8 @@ endmodule
 /**********************************************************
  *              Hazards/Forwarding Unit                  *
  **********************************************************/
-module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, ForwardC, output reg IF_ID_LE, PCLE, no_op_mux, 
-      		input [3:0] ID_Rm, ID_Rn, ID_Rd, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, ID_shift_imm);
+module Hazards_Forwarding(output reg [2:0] ForwardA, ForwardB, ForwardC, output reg IF_ID_LE, PCLE, no_op_mux, 
+      		input [3:0] ID_Rm, ID_Rn, ID_Rd, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted);
   always @ (*)
     begin
         //Initially no data hazard has been detected yet, standard register contents are passed in ID stage
@@ -180,25 +180,25 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, ForwardC, output 
         //WB Forwarding
       if(WB_RF_enable)
             begin
-              if(ID_Rn == WB_Rd) ForwardA = 2'b00; //First connection of mux A is WB_Rd
-              if (ID_Rm == WB_Rd) ForwardB = 2'b11; //Fourth connection of mux B is WB_Rd
-              if(ID_Rd == WB_Rd) ForwardC = 2'b11; // Fourth connection of mux C is [MEM_Rd]
+              if(ID_Rn == WB_Rd) ForwardA = 3'b000; //First connection of mux A is WB_Rd
+              if (ID_Rm == WB_Rd) ForwardB = 3'b011; //Fourth connection of mux B is WB_Rd
+              if(ID_Rd == WB_Rd) ForwardC = 3'b011; // Fourth connection of mux C is [MEM_Rd]
             end
             
         //MEM Forwarding
         if(MEM_RF_enable)
             begin
-              if(ID_Rn == MEM_Rd) ForwardA = 2'b01; //Second connection of mux A is MEM_Rd
-              if (ID_Rm == MEM_Rd) ForwardB = 2'b10 ; //Third connection of mux B is MEM_Rd
-              if(ID_Rd == MEM_Rd) ForwardC = 2'b10; // Third connection of mux C is [MEM_Rd]
+              if(ID_Rn == MEM_Rd) ForwardA = 3'b001; //Second connection of mux A is MEM_Rd
+              if (ID_Rm == MEM_Rd) ForwardB = 3'b010 ; //Third connection of mux B is MEM_Rd
+              if(ID_Rd == MEM_Rd) ForwardC = 3'b010; // Third connection of mux C is [MEM_Rd]
             end
             
         //EX Forwarding
        if(EX_RF_enable) 
            begin
-             if(ID_Rn == EX_Rd) ForwardA = 2'b10; //Third connection of mux B is Ex_Rd
-             if (ID_Rm == EX_Rd) ForwardB = 2'b01; //Second connection of mux B is Ex_Rd
-             if (ID_Rd == EX_Rd) ForwardC = 2'b01; //Second connection of mux C is [Ex_Rd]
+             if(ID_Rn == EX_Rd) ForwardA = 3'b010; //Third connection of mux B is Ex_Rd
+             if (ID_Rm == EX_Rd) ForwardB = 3'b001; //Second connection of mux B is Ex_Rd
+             if (ID_Rd == EX_Rd) ForwardC = 3'b001; //Second connection of mux C is [Ex_Rd]
             end
 
         //Initially, no data hazard by load instruction, sends control to CU mux
@@ -220,6 +220,26 @@ module Hazards_Forwarding(output reg [1:0] ForwardA, ForwardB, ForwardC, output 
                 IF_ID_LE = 0; 
                 no_op_mux = 1; 
             end
+      
+      //Branch Link forwarding
+      if(WB_Br_L_asserted)
+        begin
+          if(ID_Rn == 4'd14) ForwardA = 3'b110;
+          if(ID_Rm == 4'd14) ForwardB = 3'b110;
+          if(ID_Rd == 4'd14) ForwardC = 3'b110;
+        end
+      if(MEM_Br_L_asserted)
+        begin
+          if(ID_Rn == 4'd14) ForwardA = 3'b101;
+          if(ID_Rm == 4'd14) ForwardB = 3'b101;
+          if(ID_Rd == 4'd14) ForwardC = 3'b101;
+        end
+      if(EX_Br_L_asserted)
+        begin
+          if(ID_Rn == 4'd14) ForwardA = 3'b100;
+          if(ID_Rm == 4'd14) ForwardB = 3'b100;
+          if(ID_Rd == 4'd14) ForwardC = 3'b100;
+        end
     end
 endmodule  
 
@@ -1123,23 +1143,34 @@ module mux_4x1_32b (output reg [31:0] Y, input[1:0] S, input [31:0] a, b, c, d);
         endcase
 endmodule
 
+//                  32-BIT MULTIPLEXER 7x1
+module mux_7x1_32b (output reg [31:0] Y, input[2:0] S, input [31:0] a, b, c, d, e, f, g);
+    always @ (*)
+        case (S)
+            3'b000: Y = a;
+            3'b001: Y = b;
+            3'b010: Y = c;
+            3'b011: Y = d;
+          	3'b100: Y = e;
+          	3'b101: Y = f;
+          	3'b110: Y = g;
+          default: Y=32'd0;
+        endcase
+endmodule
+
 //                  32-BIT MULTIPLEXER 3x1
 module mux_3x1_32b (output reg [31:0] Y, input S0, S1, input [31:0] a, b, c);
   //Used for Write-Back stage. Chooses between providing the ouput of the ALU result in a data-processing instruction, the Data Memory in a Load instruction, or the PC+4 for the LINK register (R14). S0 is load bit and S1 is BL asserted bit. a is ALU result, b is memory output, c is PC+4.
-  //Also used for Data forwarding for Rd
     always @ (*)
       begin
       	if(S0)
           //load = 1
-          // OR there is data forwarding on Rd from 
         	Y = b; 
       	else if(S1)
           //branch link asserted 
-          // OR there is data forwarding on Rd from 
     		Y = c; 
   	  	else
           // neither load nor branch link is asserted use ALU result (both are never asserted at the same time)
-          // OR there is no data forwarding on Rd 
         	Y = a; 
       end
 endmodule
@@ -1177,8 +1208,8 @@ module Processing_Pipeline_Unit();
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
   wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_I15_12, MEM_I15_12, WB_I15_12, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes, RF_In_Port;
-    wire [2:0] I27_25, EX_I27_25;
-  wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode, ForwardA, ForwardB, ForwardC;
+  wire [2:0] I27_25, EX_I27_25, ForwardA, ForwardB, ForwardC;
+  wire [1:0] Data_Mem_Opcode, EX_Data_Mem_Opcode, MEM_Data_Mem_Opcode;
     wire shift_imm, load_instr, RF_enable, ID_B_instr, ID_shift_imm, ID_load_instr, ID_RF_enable, IF_ID_LE, PCLE, no_op_mux, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, WB_load_instr, EX_shift_imm, MEM_load_instr, EX_S, ID_S, Br_L_Instr, ID_Br_L_Instr, Br_L_asserted, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, Bit_S, data_enable, ID_data_enable, EX_data_enable, MEM_data_enable;
     wire oN,oZ,oC,oV, cond_output, condN,condZ,condC,condV, OutCarry;
  
@@ -1191,7 +1222,7 @@ module Processing_Pipeline_Unit();
   
   mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, ID_Br_L_Instr,ID_S, ID_data_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, Br_L_Instr, Bit_S, data_enable, 1'b0, 4'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);   
   
-  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, ForwardC, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_I15_12, MEM_I15_12, WB_I15_12, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, ID_shift_imm); 
+  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, ForwardC, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_I15_12, MEM_I15_12, WB_I15_12, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted); 
   
   conditionhandler Condition_Handler(cond_output, Br_L_asserted, oN,oZ,oC,oV, ID_B_instr, ID_Br_L_Instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
@@ -1206,15 +1237,16 @@ module Processing_Pipeline_Unit();
         IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25,  DataOut, nextPC,IF_ID_LE, cond_output, Clk,reset); 
 
     //Instuction Decodification Stage
-        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, I15_12, RF_In_Port, Clk, WB_RF_enable, PCLE,reset); //falta de donde viene C, a donde va POrtC, 
-        Four_SE four_SE(fourSEout, I23_0); //4xSE
+        register_file Register_File(PortA, PortB, PortC, currentPC, PortWrite, PCIN, I19_16, I3_0, I15_12, RF_In_Port, Clk, WB_RF_enable, PCLE,reset); 
+  
+  Four_SE four_SE(fourSEout, I23_0); //4xSE
+  
   adder TA_Adder (TA, ID_NextPC,fourSEout);
-  mux_4x1_32b Mux_Rn(ID_PORTn, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA); 
-  mux_4x1_32b Mux_Rm(ID_PORTm, ForwardB, PortB, EX_ALU_Res, MEM_data_fwd, PortWrite);
-  mux_4x1_32b Mux_Rd(ID_PORTd, ForwardC, PortC, EX_PORTd, MEM_PORTd, PortWrite);
-  //DELETE LATER
-  //mux_4x1_32b Mux_Rd(ID_Rd, ForwardC, PortC, PortC, PortC, PortC);
-  // WB_Content_mux(PortWrite, WB_load_instr, WB_Br_L_asserted, WB_ALU_Res, WB_Data, WB_NextPC);
+  
+  mux_7x1_32b Mux_Rn(ID_PORTn, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA, EX_NextPC, MEM_NextPC, WB_NextPC); 
+  mux_7x1_32b Mux_Rm(ID_PORTm, ForwardB, PortB, EX_ALU_Res, MEM_data_fwd, PortWrite, EX_NextPC, MEM_NextPC, WB_NextPC);
+  mux_7x1_32b Mux_Rd(ID_PORTd, ForwardC, PortC, EX_PORTd, MEM_PORTd, PortWrite, EX_NextPC, MEM_NextPC, WB_NextPC);
+  
 
     
     //ID/EX transition
