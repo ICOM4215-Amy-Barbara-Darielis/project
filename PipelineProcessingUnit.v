@@ -1278,7 +1278,7 @@ module Processing_Pipeline_Unit();
   
   mux_7x1_32b Mux_Rn(ID_PORTn, ForwardA, PortWrite, MEM_data_fwd, EX_ALU_Res, PortA, EX_NextPC, MEM_NextPC, WB_NextPC); 
   mux_7x1_32b Mux_Rm(ID_PORTm, ForwardB, PortB, EX_ALU_Res, MEM_data_fwd, PortWrite, EX_NextPC, MEM_NextPC, WB_NextPC);
-  mux_7x1_32b Mux_Rd(ID_PORTd, ForwardC, PortC, EX_PORTd, MEM_PORTd, PortWrite, EX_NextPC, MEM_NextPC, WB_NextPC);
+  mux_7x1_32b Mux_Rd(ID_PORTd, ForwardC, PortC, EX_ALU_Res, MEM_data_fwd, PortWrite, EX_NextPC, MEM_NextPC, WB_NextPC);
   
 
     
@@ -1362,7 +1362,7 @@ initial #129 $finish;
    //Initial Memory  
     
    //OFICIAL DISPLAY 
-    $monitor("PC %5d| I:%b | Data Mem Address: %d| r0: %2d | r1: %2d | r2: %2d | r3: %2d |r4: %2d | r5: %2d | r10:%2d | r12:%2d | r14: %d | Mem_Portd:%b | time: %2d", currentPC, DataOut, MEM_ALU_Res,  Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R4.Q, Register_File.R5.Q, Register_File.R10.Q,  Register_File.R12.Q, Register_File.R14.Q, MEM_PORTd, $time);       
+    $monitor("PC %5d| I:%b | Data Mem Address: %d| r0: %2d | r1: %2d | r2: %2d | r3: %2d |r4: %2d | r5: %2d | r10:%2d | r12:%2d | r14: %d | FwdC: %b | ID_Rd:%d |  PortC:%d | ID_PortD:%d | EX_Rd:%d | EX_PortD:%d | MEM_Rd:%d | MEM_PortD:%d | time: %2d", currentPC, DataOut, MEM_ALU_Res,  Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R4.Q, Register_File.R5.Q, Register_File.R10.Q,  Register_File.R12.Q, Register_File.R14.Q, ForwardC, I15_12, PortC, ID_PORTd, EX_I15_12, EX_PORTd, MEM_I15_12, MEM_PORTd, $time);       
    end
   
   integer j = 0;
