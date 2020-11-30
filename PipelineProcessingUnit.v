@@ -865,7 +865,7 @@ module register_file (output reg [31:0] PA, PB, PC, PCout, input [31:0] PD, PCIN
     //PA-PC are three output ports, while PD is one input port.
     //Added extra PCLE and PCIN input for PC counter register R15. Added PC output and third port PC and it's selector C
     wire [15:0] E; //Encoder output to register Ld input, used for register selection during input
-    wire [31:0] Qs [15:0]; //16 buses with 32 bits for register outputs
+    wire signed [31:0] Qs [15:0]; //16 buses with 32 bits for register outputs
     wire [31:0]tempPCIN;
     wire tempPCLE;
   	reg [31:0] ProgramCounter;
@@ -1237,7 +1237,7 @@ module Processing_Pipeline_Unit();
     wire [31:0] DataOut, I31_0;
     wire [31:0] PortC; //????
   wire [31:0] nextPC, currentPC, PCIN, ID_NextPC, EX_NextPC, MEM_NextPC, WB_NextPC, fourSEout, TA;
-    wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTm, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data, ID_PORTd, EX_PORTd, MEM_PORTd;
+    wire [31:0] PortA, PortB, ID_PORTm, PortWrite, ID_PORTn, EX_ALU_Res, ALU_in_2, MEM_data_fwd, EX_PORTm, EX_PORTn, SSEresult, MEM_PORTm, MEM_ALU_Res, WB_Data, WB_ALU_Res, Mem_Data, ID_PORTd, EX_PORTd, MEM_PORTd; 
     wire [23:0] I23_0;
     wire [11:0] I11_0, EX_I11_0;
   wire [3:0] ALU_op, ID_ALU_op, I19_16, I3_0, EX_I15_12, MEM_I15_12, WB_I15_12, EX_ALU_op, I31_28, I15_12, ID_I15_12, EX_Cond_Codes, MEM_Cond_Codes, RF_In_Port;
@@ -1340,7 +1340,7 @@ module Processing_Pipeline_Unit();
    Address = #1 32'b00000000000000000000000000000000;
 end
 
-initial #129 $finish;
+initial #699 $finish;
   initial begin
     Clk = 0;
     forever #5 Clk = !Clk;
@@ -1357,16 +1357,16 @@ initial #129 $finish;
       //CONTROL SIGNAL DISPLAY
   /*$display("    PC    |             I                  |            I31_0               |ID_ALU_op|Data_Mem_Opcode|ID_shift_imm|ID_load_instr|ID_RF_enable|ID_B_instr|ID_S|ID_Br_L_Instr|ID_data_enable|ForwardA |ForwardB |IF_ID_LE|PCLE|no_op_mux|cond_output|ID_Br_L_asserted|EX_ALU_op|EX_shift_imm|EX_load_instr|EX_RF_enable|EX_Data_Mem_Opcode|EX_S|EX_data_enable|EX_Br_L_asserted|MEM_load_instr|MEM_RF_enable|MEM_Data_Mem_Opcode|MEM_data_enable|MEM_Br_L_asserted|WB_load_instr|WB_RF_enable|WB_Br_L_asserted| PC_fwd |  Clk| Time  "); 
     $monitor("%d|%b|%b|   %b  |     %b        |      %b     |      %b      |      %b     |     %b    | %b  |      %b      |     %b        |  %b    |   %b   |   %b    | %b  |   %b     |      %b    |      %b         |  %b   |    %b       |      %b      |      %b     |         %b       |  %b |       %b      |        %b       |       %b      |     %b       |       %b          |       %b       |        %b        |      %b      |    %b       |       %b        |  %b  |  %b | %0d ",
-            currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ID_S, ID_Br_L_Instr, ID_data_enable, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, cond_output, Br_L_asserted, EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, EX_Data_Mem_Opcode, EX_S, EX_data_enable, EX_Br_L_asserted, MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode, MEM_data_enable, MEM_Br_L_asserted, WB_load_instr, WB_RF_enable, WB_Br_L_asserted, PC_fwd, Clk, $time );**/
+            currentPC, DataOut, I31_0, ID_ALU_op, Data_Mem_Opcode, ID_shift_imm, ID_load_instr, ID_RF_enable, ID_B_instr, ID_S, ID_Br_L_Instr, ID_data_enable, ForwardA, ForwardB, IF_ID_LE, PCLE, no_op_mux, cond_output, Br_L_asserted, EX_ALU_op, EX_shift_imm, EX_load_instr, EX_RF_enable, EX_Data_Mem_Opcode, EX_S, EX_data_enable, EX_Br_L_asserted, MEM_load_instr, MEM_RF_enable, MEM_Data_Mem_Opcode, MEM_data_enable, MEM_Br_L_asserted, WB_load_instr, WB_RF_enable, WB_Br_L_asserted, PC_fwd, Clk, $time );*/
             
    //Initial Memory  
     
    //OFICIAL DISPLAY 
-    $monitor("PC %5d| I:%b | Data Mem Address: %d| r0: %2d | r1: %2d | r2: %2d | r3: %2d |r4: %2d | r5: %2d | r10:%2d | r12:%2d | r14: %d | FwdC: %b | ID_Rd:%d |  PortC:%d | ID_PortD:%d | EX_Rd:%d | EX_PortD:%d | MEM_Rd:%d | MEM_PortD:%d | time: %2d", currentPC, DataOut, MEM_ALU_Res,  Register_File.R0.Q, Register_File.R1.Q, Register_File.R2.Q, Register_File.R3.Q, Register_File.R4.Q, Register_File.R5.Q, Register_File.R10.Q,  Register_File.R12.Q, Register_File.R14.Q, ForwardC, I15_12, PortC, ID_PORTd, EX_I15_12, EX_PORTd, MEM_I15_12, MEM_PORTd, $time);       
+    $monitor("PC: %3d| I:%b | Data Mem Address: %d| r0: %3d | r1: %3d | r2: %3d | r5: %3d | r10: %3d | r14: %3d | time: %3d", currentPC, DataOut, MEM_ALU_Res,   Register_File.R0.Q,  Register_File.R1.Q, Register_File.R2.Q, Register_File.R5.Q, Register_File.R10.Q, Register_File.R14.Q, $time);       
    end
   
   integer j = 0;
-  initial #128
+  initial #698
     begin
       $display("\nData Memory Content");
       for( j = 0; j < 256; j= j + 4)
