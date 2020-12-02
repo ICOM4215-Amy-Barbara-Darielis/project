@@ -784,7 +784,7 @@ endmodule
  **********************************************************/
 
 //                      REGISTER
-module DataReg (output reg[31:0] Q, input [31:0] D, input LE, Clk,reset);
+module DataReg (output reg signed [31:0] Q, input [31:0] D, input LE, Clk,reset);
 /*
  * 32-bit register. Active when Clk goes up. Data is saved if LE == 1.
  */
@@ -1362,7 +1362,7 @@ initial #699 $finish;
    //Initial Memory  
     
    //OFICIAL DISPLAY 
-    $monitor("PC: %3d| I:%b | Data Mem Address: %d| r0: %3d | r1: %3d | r2: %3d | r5: %3d | r10: %3d | r14: %3d | time: %3d", currentPC, DataOut, MEM_ALU_Res,   Register_File.R0.Q,  Register_File.R1.Q, Register_File.R2.Q, Register_File.R5.Q, Register_File.R10.Q, Register_File.R14.Q, $time);       
+    $monitor("PC: %3d| I:%b | Data Mem Address: %d| r0: %d | r1: %3d | r2: %3d | r4: %d | r5: %d | r10: %3d | r11: %d |  r14: %3d | time: %3d", currentPC, DataOut, MEM_ALU_Res, Register_File.R0.Q,  Register_File.R1.Q, Register_File.R2.Q, Register_File.R4.Q, Register_File.R5.Q, Register_File.R10.Q, Register_File.R11.Q,  Register_File.R14.Q, $time);       
    end
   
   integer j = 0;
