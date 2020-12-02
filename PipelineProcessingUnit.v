@@ -43,6 +43,11 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
             begin 
                Data_Mem_Opcode = 2'b10;
                RF_enable = 1;
+              //Check for CMP, TST, etc
+              if(I[24:21] == 4'b1000 || I[24:21] == 4'b1001 || I[24:21] == 4'b1010 || I[24:21] == 4'b1011)
+                begin
+                  RF_enable = 0;
+                end
               //Check for invalid instructions
               if( I[4] == 1 || (I[20] == 0 && I[24:23] == 2'b10) ) //Last OR(AND(OR) operation to filter invalid shifter operands(data processing instructions)
                   begin
@@ -54,6 +59,11 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
               Data_Mem_Opcode = 2'b10;
               RF_enable = 1;
               Shift_imm = 1;
+              //Check for CMP, TST, etc
+              if(I[24:21] == 4'b1000 || I[24:21] == 4'b1001 || I[24:21] == 4'b1010 || I[24:21] == 4'b1011)
+                begin
+                  RF_enable = 0;
+                end
               //Check for invalid instructions
               if( I[24:23] == 2'b10 && (I[21:20] == 2'b00 || I[21:20] == 2'b10) )
                   begin
@@ -168,7 +178,7 @@ endmodule
  *              Hazards/Forwarding Unit                  *
  **********************************************************/
 module Hazards_Forwarding(output reg [2:0] ForwardA, ForwardB, ForwardC, output reg IF_ID_LE, PCLE, no_op_mux, output reg [1:0] PC_fwd,
-      		input [3:0] ID_Rm, ID_Rn, ID_Rd, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted);
+      		input [3:0] ID_Rm, ID_Rn, ID_Rd, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, ID_RF_enable);
   always @ (*)
     begin
         //Initially no data hazard has been detected yet, standard register contents are passed in ID stage
@@ -242,17 +252,38 @@ module Hazards_Forwarding(output reg [2:0] ForwardA, ForwardB, ForwardC, output 
         end
       
       // PC (R15) forwarding
+      
       PC_fwd = 2'b00; //initially no data forwarding
-      if(MEM_load_instr && MEM_Rd == 4'd15) 
+     
+      if(WB_RF_enable && WB_Rd == 4'd15) 
+        begin
+          PC_fwd = 2'b10; //Value is still taken from WB stage result
+          no_op_mux = 1;
+          //PCLE = 0;
+          //IF_ID_LE = 0;
+
+        end
+      if(MEM_RF_enable && MEM_Rd == 4'd15) 
         begin
           PC_fwd = 2'b10; 
           no_op_mux = 1;
-          IF_ID_LE = 1;
+          PCLE = 0;
+          //IF_ID_LE = 0;
+
         end
       if(EX_RF_enable && EX_Rd == 4'd15) 
         begin
           PC_fwd = 2'b01;
           no_op_mux = 1;
+          //IF_ID_LE = 0;
+          PCLE = 0; 
+        end
+      if(ID_RF_enable && ID_Rd == 4'd15)
+        begin
+          PCLE = 0; 
+          //IF_ID_LE = 0;
+          //no_op_mux = 1;
+          PC_fwd = 2'b11;
         end
     end
 endmodule  
@@ -1020,7 +1051,7 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
           if (IF_ID_LE) 
               begin
                   ID_NextPC <= IF_NextPC;
-                if(IF_flush || PC_fwd == 2'b01) 
+                if(IF_flush || PC_fwd ) 
                     begin
                       I31_0 = 32'b0; 
                     end
@@ -1158,11 +1189,12 @@ module mux_4x1_32b (output reg [31:0] Y, input[1:0] S, input [31:0] a, b, c, d);
 endmodule
 
 //                  special 32-BIT MULTIPLEXER 5x1
-module special_mux_4x1_32b (output reg [31:0] Y, input S0, input [1:0] S1, input [31:0] a, b, c, d);
+module special_mux_4x1_32b (output reg [31:0] Y, input S0, input [1:0] S1, input [31:0] a, b, c, d, e);
   // A = NextPC
   // B = TA
   // C = ALU_RES
   // D = MEM-data_fwd
+  // E = Rm
     always @ (*)
       if(S0) Y = b;
       else
@@ -1171,7 +1203,7 @@ module special_mux_4x1_32b (output reg [31:0] Y, input S0, input [1:0] S1, input
               2'b00: Y = a;
               2'b01: Y = c;
               2'b10: Y = d;
-              default: Y = a;
+              2'b11: Y = e;
         	endcase
         end
 endmodule
@@ -1255,16 +1287,16 @@ module Processing_Pipeline_Unit();
   
   mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, ID_Br_L_Instr,ID_S, ID_data_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, Br_L_Instr, Bit_S, data_enable, 1'b0, 4'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);   
   
-  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, ForwardC, IF_ID_LE, PCLE, no_op_mux, PC_fwd, I3_0, I19_16, I15_12, EX_I15_12, MEM_I15_12, WB_I15_12, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted); 
+  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, ForwardC, IF_ID_LE, PCLE, no_op_mux, PC_fwd, I3_0, I19_16, I15_12, EX_I15_12, MEM_I15_12, WB_I15_12, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, ID_RF_enable); 
   
   conditionhandler Condition_Handler(cond_output, Br_L_asserted, oN,oZ,oC,oV, ID_B_instr, ID_Br_L_Instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
-
+ 
     //Instruction Fetch stage
         //PC comes from Register File R15
   ram256x8 Instruction_Mem(DataOut, Enable, currentPC, DataIn); //Data in belongs to precharge. 
         adder PC_Adder (nextPC, currentPC, 32'd4);
-  special_mux_4x1_32b PC_mux(PCIN, cond_output, PC_fwd, nextPC, TA, EX_ALU_Res, MEM_data_fwd);
+  special_mux_4x1_32b PC_mux(PCIN, cond_output, PC_fwd, nextPC, TA, EX_ALU_Res, MEM_data_fwd, ID_PORTm);
          
     //IF/ID transition
         IFIDRegister IFID_Register(I31_0, ID_NextPC, I23_0, I11_0, I3_0, I19_16, I15_12, I31_28, I27_25,  DataOut, nextPC, PC_fwd, IF_ID_LE, cond_output, Clk,reset); 
@@ -1362,7 +1394,7 @@ initial #699 $finish;
    //Initial Memory  
     
    //OFICIAL DISPLAY 
-    $monitor("PC: %3d| I:%b | Data Mem Address: %d| r0: %d | r1: %3d | r2: %3d | r4: %d | r5: %d | r10: %3d | r11: %d |  r14: %3d | time: %3d", currentPC, DataOut, MEM_ALU_Res, Register_File.R0.Q,  Register_File.R1.Q, Register_File.R2.Q, Register_File.R4.Q, Register_File.R5.Q, Register_File.R10.Q, Register_File.R11.Q,  Register_File.R14.Q, $time);       
+    $monitor("PC: %3d| Data_Mem_Address: %b| r3: %d | r4: %3d | r5: %3d | r10: %d | r11: %d | r12: %d | r14: %d |", currentPC, MEM_ALU_Res, Register_File.R3.Q, Register_File.R4.Q, Register_File.R5.Q, Register_File.R10.Q, Register_File.R11.Q, Register_File.R12.Q,Register_File.R14.Q);       
    end
   
   integer j = 0;
@@ -1371,7 +1403,7 @@ initial #699 $finish;
       $display("\nData Memory Content");
       for( j = 0; j < 256; j= j + 4)
           begin
-            $display("%3d: %d %d %d %d", j, Data_Mem.Mem[j], Data_Mem.Mem[j + 1], Data_Mem.Mem[j + 2], Data_Mem.Mem[j + 3]);
+            $display("%3d: %b %b %b %b", j, Data_Mem.Mem[j], Data_Mem.Mem[j + 1], Data_Mem.Mem[j + 2], Data_Mem.Mem[j + 3]);
           end
      end
 endmodule
