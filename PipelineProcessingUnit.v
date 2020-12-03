@@ -43,6 +43,7 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
             begin 
                Data_Mem_Opcode = 2'b10;
                RF_enable = 1;
+               Shift_imm = 1;
               //Check for CMP, TST, etc
               if(I[24:21] == 4'b1000 || I[24:21] == 4'b1001 || I[24:21] == 4'b1010 || I[24:21] == 4'b1011)
                 begin
@@ -372,6 +373,7 @@ module ALU(output reg[31:0] result, output reg condN,condZ,condC,condV, input[31
             //1. 0000 AND 
                 4'b0000:
         			begin
+                   //   $display("in2= %d in1= %d ",in2,in1);
             			//Rd = Rn AND shifter_operand
             			result = (in1 & in2);
                         //else if S == 1 then
@@ -744,9 +746,10 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, input[
 	                   //Arithmetic Shift Right
 	                    if(num12[6:5]==2'b10)
     	                     begin
+                               
             	              // if shift_imm == 0 then
             	              if(num12[11:7]==4'b0000)
-            	                    begin
+            	                    begin                               
             	                      //  if Rm[31] == 0 then
             	                      if(rm[31]==0)
             	                            begin
@@ -765,7 +768,9 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, input[
             	                    end
                             else /* shift_imm > 0 */
                                 begin
-                                result = $signed(rm) >>> num12[11:7];
+                                  
+                                  result = $signed(rm)>>> num12[11:7];
+                                //  $display("r= %d rm= %d num=%d",result,rm,num12[11:7]);
                                 OutCarry = rm[num12[11:7]-1];
                                    // shifter_operand = Rm Arithmetic_Shift_Right <shift_imm>
                                    // shifter_carry_out = Rm[shift_imm - 1]
@@ -783,8 +788,10 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, input[
                 	                end
                 	           else
                 	                begin
+                                     
                 	                    result = {rm,rm} >> num12[11:7];
                 	                    OutCarry = rm[num12[11:7]-1];
+                                     // $display("r= %d rm= %d num=%d",result,rm,num12[11:7]);
                 	                end
                                // See “Data-processing operands - Rotate right with extend” on page A5-17
                                // else /* shift_imm > 0 */
@@ -805,7 +812,9 @@ module shifterSignExtender(output reg [31:0] result, output reg OutCarry, input[
                 end
 		endcase		
 	//end of begin 1
+     // $display("r= %d rm= %d num=%d",result,rm,num12[11:7]);
 	end
+  
 //shift by immediate (second //since we need to execute a block of codes, aka run more than one expression, we use begin-end
 //end of shifterSignExtender
 endmodule
@@ -854,8 +863,12 @@ endmodule
 module mux_2x1_32b (output reg [31:0] Y, input S, input [31:0] A, B);
     // If S=1, Y=B. If S=0, Y=A.
     always @(S, A, B)
+      begin
       if (S) Y = B;
         else Y = A;
+       // $display("inputA: %d,inputB: %d, Resulty: %d",A,B,Y);
+      end
+  
 endmodule
 
 //                  1-BIT MULTIPLEXER 2x1
