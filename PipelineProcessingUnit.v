@@ -219,7 +219,7 @@ module Hazards_Forwarding(output reg [2:0] ForwardA, ForwardB, ForwardC, output 
         
         //Data hazard by load instruction, controlling CU mux
         // no_op_mux = 0 means control unit signals are sent instead of no op
-      if(EX_load_instr && ID_Rm == EX_Rd && !ID_shift_imm) 
+      if(EX_load_instr && ID_Rm == EX_Rd) 
             begin
                 PCLE = 0; 
                 IF_ID_LE = 0; 
