@@ -46,10 +46,11 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
                Data_Mem_Opcode = 2'b10;
                RF_enable = 1;
                Shift_imm = 1;
-               if(alu_Op==4'b1101)
-        		begin
+              if(alu_Op==4'b1101 && I[15:12]==4'd15)
+        		  begin
           			mov_instr = 1'b1;
-        		end
+                    RF_enable = 0;	
+        		  end
               //Check for CMP, TST, etc
               if(I[24:21] == 4'b1000 || I[24:21] == 4'b1001 || I[24:21] == 4'b1010 || I[24:21] == 4'b1011)
                 begin
@@ -68,7 +69,8 @@ module ControlUnit(output reg [1:0] Data_Mem_Opcode, output reg [3:0] alu_Op, ou
               Shift_imm = 1;
               if(alu_Op==4'b1101)
         		begin
-          			mov_instr = 1'b1;
+                    RF_enable = 0;	
+                    mov_instr = 1'b1;
         		end
               //Check for CMP, TST, etc
               if(I[24:21] == 4'b1000 || I[24:21] == 4'b1001 || I[24:21] == 4'b1010 || I[24:21] == 4'b1011)
@@ -1043,7 +1045,7 @@ module IFIDRegister (output reg [31:0] I31_0, ID_NextPC, output reg [23:0] I23_0
           if (IF_ID_LE) 
               begin
                   ID_NextPC <= IF_NextPC;
-                if(IF_flush ) 
+                if(IF_flush) 
                     begin
                       I31_0 = 32'b0; 
                     end
