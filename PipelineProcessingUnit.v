@@ -191,7 +191,7 @@ endmodule
  *              Hazards/Forwarding Unit                  *
  **********************************************************/
 module Hazards_Forwarding(output reg [2:0] ForwardA, ForwardB, ForwardC, output reg IF_ID_LE, PCLE, no_op_mux, 
-                          input [3:0] ID_Rm, ID_Rn, ID_Rd, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, ID_RF_enable);
+                          input [3:0] ID_Rm, ID_Rn, ID_Rd, EX_Rd, MEM_Rd, WB_Rd, input EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, ID_RF_enable);
   always @ (*)
     begin
         //Initially no data hazard has been detected yet, standard register contents are passed in ID stage
@@ -1280,7 +1280,7 @@ module Processing_Pipeline_Unit();
   
   mux_8x4_32b mux_8x4(ID_shift_imm, ID_ALU_op, ID_load_instr, ID_RF_enable, ID_Br_L_Instr,ID_S, ID_data_enable, no_op_mux, shift_imm, ALU_op, load_instr, RF_enable, Br_L_Instr, Bit_S, data_enable, 1'b0, 4'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);   
   
-  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, ForwardC, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_I15_12, MEM_I15_12, WB_I15_12, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, ID_shift_imm, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, ID_RF_enable); 
+  Hazards_Forwarding HazardForwarding_Unit(ForwardA, ForwardB, ForwardC, IF_ID_LE, PCLE, no_op_mux, I3_0, I19_16, I15_12, EX_I15_12, MEM_I15_12, WB_I15_12, EX_RF_enable, WB_RF_enable, MEM_RF_enable, EX_load_instr, MEM_load_instr, EX_Br_L_asserted, MEM_Br_L_asserted, WB_Br_L_asserted, ID_RF_enable); 
   
   conditionhandler Condition_Handler(cond_output, Br_L_asserted, oN,oZ,oC,oV, ID_B_instr, ID_Br_L_Instr,mov_instr, I31_28);
     CPSR CPsr(oN,oZ,oC,oV,EX_S,condN,condC,condZ,condV); 
